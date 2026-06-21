@@ -111,14 +111,14 @@ export default function CreatePage() {
           onDrag={dragPlayer} onRemove={removeFromPitch} readOnly={false}
         />
 
-        <div style={{ margin: '20px 16px 0', height: 1, background: C.border }} />
+        <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
 
         <Bench
           bench={bench} onAddToPitch={addToPitch}
           onDeleteFromSquad={deleteFromSquad} onAddPlayer={addPlayer} readOnly={false}
         />
 
-        <div style={{ margin: '20px 16px 0', height: 1, background: C.border }} />
+        <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
 
         <Comments quarter={quarter} onAddComment={handleAddComment} />
       </div>

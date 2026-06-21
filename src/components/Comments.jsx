@@ -25,7 +25,7 @@ export default function Comments({ quarter, onAddComment }) {
   };
 
   return (
-    <div style={{ padding: '20px 16px 48px' }}>
+    <div style={{ padding: '20px 24px 48px' }}>
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>

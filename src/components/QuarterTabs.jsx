@@ -6,7 +6,7 @@ export default function QuarterTabs({ quarters, activeIdx, setActiveIdx, addQuar
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: 6,
-        padding: '0 16px 12px',
+        padding: '0 24px 12px',
         overflowX: 'auto', scrollbarWidth: 'none',
         borderBottom: `1px solid ${C.border}`,
       }}

@@ -32,7 +32,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
   const L = C.pitchLine;
 
   return (
-    <div style={{ padding: '16px 16px 0' }}>
+    <div style={{ padding: '16px 24px 0' }}>
       <div
         ref={pitchRef}
         style={{

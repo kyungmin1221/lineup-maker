@@ -87,7 +87,7 @@ export default function ViewPage() {
           readOnly
         />
 
-        <div style={{ height: 1, background: C.border, margin: '20px 16px 0' }} />
+        <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
 
         <Comments quarter={quarter} onAddComment={handleAddComment} />
       </div>

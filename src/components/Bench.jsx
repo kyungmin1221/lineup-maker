@@ -14,7 +14,7 @@ export default function Bench({ bench, onAddToPitch, onDeleteFromSquad, onAddPla
   };
 
   return (
-    <div style={{ padding: '20px 16px 0' }}>
+    <div style={{ padding: '20px 24px 0' }}>
       {/* label */}
       <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
         대기 선수 {bench.length > 0 && <span style={{ color: C.blueBright }}>{bench.length}</span>}
