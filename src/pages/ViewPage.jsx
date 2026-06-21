@@ -63,7 +63,15 @@ export default function ViewPage() {
       <div className="max-w-md mx-auto">
         <Header
           teamName={lineup.teamName}
-          onShare={async () => { await navigator.clipboard.writeText(window.location.href); showToast('링크가 복사됐어요!'); }}
+          onShare={async () => {
+            const url = window.location.href;
+            if (navigator.share) {
+              await navigator.share({ title: `${lineup.teamName} 라인업`, url }).catch(() => {});
+            } else {
+              await navigator.clipboard.writeText(url);
+              showToast('링크가 복사됐어요!');
+            }
+          }}
           readOnly
         />
 

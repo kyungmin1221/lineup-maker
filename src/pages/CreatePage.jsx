@@ -37,9 +37,21 @@ export default function CreatePage() {
       } else {
         await updateLineup(id, data);
       }
-      await navigator.clipboard.writeText(`${window.location.origin}/view/${id}`);
-      showToast('공유 링크가 복사됐어요!');
+
+      const url = `${window.location.origin}/view/${id}`;
+
+      // 모바일: 네이티브 공유 시트 사용
+      if (navigator.share) {
+        await navigator.share({ title: `${teamName} 라인업`, url });
+        showToast('공유 완료!');
+      } else {
+        // PC: 클립보드 복사
+        await navigator.clipboard.writeText(url);
+        showToast('링크가 복사됐어요!');
+      }
     } catch (err) {
+      // 공유 취소는 에러가 아님
+      if (err?.name === 'AbortError') return;
       console.error(err);
       showToast('저장 중 오류가 발생했습니다.');
     } finally {
