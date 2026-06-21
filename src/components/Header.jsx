@@ -10,8 +10,8 @@ export default function Header({
   readOnly,
 }) {
   return (
-    <div className="flex items-start justify-between px-6 pt-6 pb-5">
-      <div className="flex-1 min-w-0 mr-3">
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '24px 24px 20px' }}>
+      <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
         <p
           style={{
             fontSize: 11,
