@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; font-family: 'Inter', -apple-system, sans-serif; }
+
+input, button { font-family: inherit; }
+
+input::placeholder { opacity: 0.4; }
+
+.lm-token { touch-action: none; }
