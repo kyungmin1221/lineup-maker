@@ -141,6 +141,16 @@ export function useLineup(initialData) {
     [activeIdx]
   );
 
+  // Firestore에서 받은 댓글을 로컬 상태에 반영 (선수 배치는 덮어쓰지 않음)
+  const syncRemoteComments = useCallback((remoteQuarters) => {
+    setQuarters((prev) =>
+      prev.map((q, i) => ({
+        ...q,
+        comments: remoteQuarters[i]?.comments ?? q.comments,
+      }))
+    );
+  }, []);
+
   return {
     teamName,
     setTeamName,
@@ -158,5 +168,6 @@ export function useLineup(initialData) {
     addQuarter,
     removeQuarter,
     addComment,
+    syncRemoteComments,
   };
 }

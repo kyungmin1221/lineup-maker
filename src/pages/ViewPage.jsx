@@ -5,7 +5,7 @@ import QuarterTabs from '../components/QuarterTabs';
 import Pitch from '../components/Pitch';
 import Comments from '../components/Comments';
 import Toast from '../components/Toast';
-import { getLineup, addComment as firebaseAddComment } from '../firebase/lineupService';
+import { subscribeToLineup, addComment as saveComment } from '../firebase/lineupService';
 import { useToast } from '../hooks/useToast';
 import { C } from '../constants';
 
@@ -16,22 +16,19 @@ export default function ViewPage() {
   const [activeIdx, setActiveIdx] = useState(0);
   const { toast, showToast } = useToast();
 
+  // Firestore 실시간 구독 — 라인업·댓글 모두 자동 반영
   useEffect(() => {
-    getLineup(id)
-      .then(setLineup)
-      .catch(() => showToast('라인업을 불러오지 못했습니다.'))
-      .finally(() => setLoading(false));
+    const unsub = subscribeToLineup(id, (data) => {
+      setLineup(data);
+      setLoading(false);
+    });
+    return unsub;
   }, [id]);
 
   const handleAddComment = async (name, text) => {
     try {
-      await firebaseAddComment(id, activeIdx, { name, text });
-      setLineup((prev) => {
-        const quarters = prev.quarters.map((q, i) =>
-          i === activeIdx ? { ...q, comments: [...(q.comments || []), { name, text, createdAt: Date.now() }] } : q
-        );
-        return { ...prev, quarters };
-      });
+      await saveComment(id, activeIdx, { name, text });
+      // Firestore onSnapshot이 자동으로 상태를 업데이트하므로 별도 setState 불필요
     } catch {
       showToast('댓글 등록에 실패했습니다.');
     }
@@ -39,18 +36,18 @@ export default function ViewPage() {
 
   if (loading) {
     return (
-      <div className="lm-body flex items-center justify-center min-h-screen" style={{ background: C.bg }}>
-        <div className="text-sm" style={{ color: C.textMuted }}>불러오는 중...</div>
+      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontSize: 14, color: C.muted }}>불러오는 중...</div>
       </div>
     );
   }
 
   if (!lineup) {
     return (
-      <div className="lm-body flex items-center justify-center min-h-screen" style={{ background: C.bg }}>
-        <div className="text-center">
-          <div className="lm-display text-4xl mb-2" style={{ color: C.blueLight }}>404</div>
-          <div className="text-sm" style={{ color: C.textMuted }}>라인업을 찾을 수 없습니다.</div>
+      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 48, fontWeight: 800, color: C.blueLight, marginBottom: 8 }}>404</div>
+          <div style={{ fontSize: 14, color: C.muted }}>라인업을 찾을 수 없습니다.</div>
         </div>
       </div>
     );
@@ -59,8 +56,8 @@ export default function ViewPage() {
   const quarter = lineup.quarters[activeIdx];
 
   return (
-    <div className="lm-body min-h-full" style={{ background: C.bg, color: C.text }}>
-      <div className="max-w-md mx-auto">
+    <div style={{ background: C.bg, minHeight: '100%', color: C.text }}>
+      <div style={{ maxWidth: 480, margin: '0 auto' }}>
         <Header
           teamName={lineup.teamName}
           onShare={async () => {

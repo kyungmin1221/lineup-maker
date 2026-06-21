@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
 import Pitch from '../components/Pitch';
@@ -7,7 +7,7 @@ import Comments from '../components/Comments';
 import Toast from '../components/Toast';
 import { useLineup } from '../hooks/useLineup';
 import { useToast } from '../hooks/useToast';
-import { createLineup, updateLineup } from '../firebase/lineupService';
+import { createLineup, updateLineup, addComment as saveComment, subscribeToLineup } from '../firebase/lineupService';
 import { C } from '../constants';
 
 export default function CreatePage() {
@@ -23,8 +23,17 @@ export default function CreatePage() {
     addToPitch, removeFromPitch, dragPlayer,
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,
-    addComment,
+    addComment, syncRemoteComments,
   } = useLineup();
+
+  // 저장된 라인업의 댓글을 실시간으로 받아옴
+  useEffect(() => {
+    if (!savedId) return;
+    const unsub = subscribeToLineup(savedId, (remote) => {
+      if (remote?.quarters) syncRemoteComments(remote.quarters);
+    });
+    return unsub;
+  }, [savedId, syncRemoteComments]);
 
   const handleShare = async () => {
     setSaving(true);
@@ -39,23 +48,27 @@ export default function CreatePage() {
       }
 
       const url = `${window.location.origin}/view/${id}`;
-
-      // 모바일: 네이티브 공유 시트 사용
       if (navigator.share) {
         await navigator.share({ title: `${teamName} 라인업`, url });
         showToast('공유 완료!');
       } else {
-        // PC: 클립보드 복사
         await navigator.clipboard.writeText(url);
         showToast('링크가 복사됐어요!');
       }
     } catch (err) {
-      // 공유 취소는 에러가 아님
       if (err?.name === 'AbortError') return;
       console.error(err);
       showToast('저장 중 오류가 발생했습니다.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // 작성자가 댓글 달면 Firestore에도 즉시 저장
+  const handleAddComment = async (name, text) => {
+    addComment(name, text);
+    if (savedId) {
+      await saveComment(savedId, activeIdx, { name, text }).catch(console.error);
     }
   };
 
@@ -87,12 +100,12 @@ export default function CreatePage() {
 
         <div style={{ margin: '20px 16px 0', height: 1, background: C.border }} />
 
-        <Comments quarter={quarter} onAddComment={addComment} />
+        <Comments quarter={quarter} onAddComment={handleAddComment} />
       </div>
 
       {saving && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(11,17,32,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:40 }}>
-          <div style={{ background: C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:'14px 24px', fontSize:14, fontWeight:500, color:C.text }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,17,32,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 40 }}>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '14px 24px', fontSize: 14, fontWeight: 500, color: C.text }}>
             저장 중...
           </div>
         </div>

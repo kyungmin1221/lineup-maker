@@ -3,6 +3,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  onSnapshot,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "./config";
@@ -33,6 +34,14 @@ export async function getLineup(id) {
 export async function updateLineup(id, data) {
   const ref = doc(db, "lineups", id);
   await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+}
+
+// 실시간 구독 - unsubscribe 함수 반환
+export function subscribeToLineup(id, callback) {
+  const ref = doc(db, "lineups", id);
+  return onSnapshot(ref, (snap) => {
+    callback(snap.exists() ? snap.data() : null);
+  });
 }
 
 export async function addComment(lineupId, quarterIdx, comment) {
