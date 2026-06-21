@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
 import Pitch from '../components/Pitch';
@@ -7,14 +7,22 @@ import Comments from '../components/Comments';
 import Toast from '../components/Toast';
 import { useLineup } from '../hooks/useLineup';
 import { useToast } from '../hooks/useToast';
-import { createLineup, updateLineup, addComment as saveComment, subscribeToLineup } from '../firebase/lineupService';
+import {
+  createLineup,
+  updateLineup,
+  addComment as saveComment,
+  subscribeToLineup,
+} from '../firebase/lineupService';
 import { C } from '../constants';
 
 export default function CreatePage() {
   const [editingTeam, setEditingTeam] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState(null);
+  const [saving, setSaving] = useState(false);
   const { toast, showToast } = useToast();
+
+  // onSnapshot이 트리거한 상태 변경에서 자동저장이 다시 실행되는 것을 방지
+  const skipNextSave = useRef(false);
 
   const {
     teamName, setTeamName,
@@ -26,31 +34,44 @@ export default function CreatePage() {
     addComment, syncRemoteComments,
   } = useLineup();
 
-  // 저장된 라인업의 댓글을 실시간으로 받아옴
+  // 저장된 후: 친구 댓글을 실시간으로 동기화
   useEffect(() => {
     if (!savedId) return;
     const unsub = subscribeToLineup(savedId, (remote) => {
-      if (remote?.quarters) syncRemoteComments(remote.quarters);
+      if (remote?.quarters) {
+        skipNextSave.current = true; // 이 상태 변경으로 인한 자동저장 건너뜀
+        syncRemoteComments(remote.quarters);
+      }
     });
     return unsub;
   }, [savedId, syncRemoteComments]);
 
+  // 라인업 변경 시 1초 후 자동 저장 (remote 업데이트 제외)
+  useEffect(() => {
+    if (!savedId) return;
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      updateLineup(savedId, { teamName, squad, quarters }).catch(console.error);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [savedId, teamName, squad, quarters]);
+
+  // 공유 버튼: 최초엔 문서 생성, 이후엔 링크만 공유
   const handleShare = async () => {
-    setSaving(true);
     try {
-      const data = { teamName, squad, quarters };
       let id = savedId;
       if (!id) {
-        id = await createLineup(data);
+        setSaving(true);
+        id = await createLineup({ teamName, squad, quarters });
         setSavedId(id);
-      } else {
-        await updateLineup(id, data);
+        setSaving(false);
       }
-
       const url = `${window.location.origin}/view/${id}`;
       if (navigator.share) {
         await navigator.share({ title: `${teamName} 라인업`, url });
-        showToast('공유 완료!');
       } else {
         await navigator.clipboard.writeText(url);
         showToast('링크가 복사됐어요!');
@@ -58,13 +79,12 @@ export default function CreatePage() {
     } catch (err) {
       if (err?.name === 'AbortError') return;
       console.error(err);
-      showToast('저장 중 오류가 발생했습니다.');
-    } finally {
       setSaving(false);
+      showToast('오류가 발생했습니다.');
     }
   };
 
-  // 작성자가 댓글 달면 Firestore에도 즉시 저장
+  // 작성자 댓글: 로컬 + Firestore 동시 저장
   const handleAddComment = async (name, text) => {
     addComment(name, text);
     if (savedId) {
