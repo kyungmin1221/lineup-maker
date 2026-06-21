@@ -20,7 +20,7 @@ export const nextId = () => String(++_uid);
 
 export const STARTER_SQUAD = [
   { id: '1',  name: '유상엽', number: '1'  },
-  { id: '2',  name: '박주현', number: '2'  },
+  { id: '2',  name: '이주호', number: '2'  },
   { id: '3',  name: '김태용', number: '3'  },
   { id: '4',  name: '김응록', number: '4'  },
   { id: '5',  name: '김다운', number: '5'  },
@@ -29,11 +29,11 @@ export const STARTER_SQUAD = [
   { id: '8',  name: '엄태성', number: '8'  },
   { id: '9',  name: '이지우', number: '9'  },
   { id: '10', name: '박준영', number: '10' },
-  { id: '11', name: '최민준', number: '11' },
+  { id: '11', name: '이재광', number: '11' },
   { id: '12', name: '제현동', number: '12' },
   { id: '13', name: '박주현', number: '13' },
   { id: '14', name: '이정후', number: '14' },
-  { id: '15', name: '이재광', number: '15' },
+  { id: '15', name: '최민준', number: '15' },
 ];
 
 export const STARTER_LAYOUT = [
