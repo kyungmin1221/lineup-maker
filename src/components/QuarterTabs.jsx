@@ -1,8 +1,80 @@
+import { useState } from 'react';
 import { Plus, Copy } from 'lucide-react';
 import { C } from '../constants';
 
-export default function QuarterTabs({ quarters, activeIdx, setActiveIdx, addQuarter, removeQuarter, readOnly }) {
+function ConfirmDialog({ label, onConfirm, onCancel }) {
   return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: C.surface,
+          border: `1px solid ${C.borderMid}`,
+          borderRadius: 14, padding: '24px 28px',
+          display: 'flex', flexDirection: 'column', gap: 20,
+          minWidth: 260, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        }}
+      >
+        <p style={{ margin: 0, color: C.text, fontSize: 14, lineHeight: 1.6 }}>
+          <strong style={{ color: C.accentInk }}>{label}</strong> 쿼터를 삭제할까요?<br />
+          <span style={{ color: C.sub, fontSize: 12 }}>삭제 후 되돌릴 수 없습니다.</span>
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: '7px 18px', borderRadius: 8,
+              border: `1px solid ${C.borderMid}`, background: 'transparent',
+              color: C.sub, fontSize: 13, cursor: 'pointer',
+            }}
+          >
+            취소
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              padding: '7px 18px', borderRadius: 8,
+              border: 'none', background: '#c0392b',
+              color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function QuarterTabs({ quarters, activeIdx, setActiveIdx, addQuarter, removeQuarter, readOnly }) {
+  const [pendingRemove, setPendingRemove] = useState(null);
+
+  function handleRemoveClick(e, i) {
+    e.stopPropagation();
+    setPendingRemove(i);
+  }
+
+  function handleConfirm() {
+    removeQuarter(pendingRemove);
+    setPendingRemove(null);
+  }
+
+  return (
+    <>
+      {pendingRemove !== null && (
+        <ConfirmDialog
+          label={quarters[pendingRemove]?.label}
+          onConfirm={handleConfirm}
+          onCancel={() => setPendingRemove(null)}
+        />
+      )}
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: 6,
@@ -32,7 +104,7 @@ export default function QuarterTabs({ quarters, activeIdx, setActiveIdx, addQuar
             {q.label}
             {!readOnly && quarters.length > 1 && (
               <span
-                onClick={e => { e.stopPropagation(); removeQuarter(i); }}
+                onClick={e => handleRemoveClick(e, i)}
                 style={{ fontSize: 10, lineHeight: 1, opacity: 0.7, display: 'flex', alignItems: 'center' }}
               >
                 ✕
@@ -72,5 +144,6 @@ export default function QuarterTabs({ quarters, activeIdx, setActiveIdx, addQuar
         </>
       )}
     </div>
+    </>
   );
 }
