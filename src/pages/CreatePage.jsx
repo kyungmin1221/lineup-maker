@@ -15,6 +15,7 @@ import {
   subscribeToLineup,
 } from '../firebase/lineupService';
 import { ensureSignedIn } from '../firebase/auth';
+import { trackEvent } from '../lib/analytics';
 import { C } from '../constants';
 
 const CACHE_KEY = 'lineup-maker:my-lineup-id';
@@ -127,8 +128,10 @@ function Editor({ id, initialData }) {
       const url = `${window.location.origin}/view/${id}`;
       if (navigator.share) {
         await navigator.share({ title: `${teamName} 라인업`, url });
+        trackEvent('share_lineup', { method: 'native' });
       } else {
         await navigator.clipboard.writeText(url);
+        trackEvent('share_lineup', { method: 'clipboard' });
         showToast('링크가 복사됐어요!');
       }
     } catch (err) {
@@ -142,6 +145,7 @@ function Editor({ id, initialData }) {
   const handleAddComment = async (name, text) => {
     addComment(name, text);
     await saveComment(id, activeIdx, { name, text }).catch(console.error);
+    trackEvent('add_comment', { role: 'owner' });
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
@@ -7,6 +7,7 @@ import Comments from '../components/Comments';
 import Toast from '../components/Toast';
 import { subscribeToLineup, addComment as saveComment } from '../firebase/lineupService';
 import { useToast } from '../hooks/useToast';
+import { trackEvent } from '../lib/analytics';
 import { C } from '../constants';
 
 export default function ViewPage() {
@@ -15,12 +16,18 @@ export default function ViewPage() {
   const [loading, setLoading] = useState(true);
   const [activeIdx, setActiveIdx] = useState(0);
   const { toast, showToast } = useToast();
+  const viewTracked = useRef(false);
 
   // Firestore 실시간 구독 — 라인업·댓글 모두 자동 반영
   useEffect(() => {
     const unsub = subscribeToLineup(id, (data) => {
       setLineup(data);
       setLoading(false);
+      // 라인업이 실제로 로드된 첫 순간에 view_lineup 한 번만 전송
+      if (data && !viewTracked.current) {
+        viewTracked.current = true;
+        trackEvent('view_lineup');
+      }
     });
     return unsub;
   }, [id]);
@@ -28,6 +35,7 @@ export default function ViewPage() {
   const handleAddComment = async (name, text) => {
     try {
       await saveComment(id, activeIdx, { name, text });
+      trackEvent('add_comment', { role: 'viewer' });
       // Firestore onSnapshot이 자동으로 상태를 업데이트하므로 별도 setState 불필요
     } catch {
       showToast('댓글 등록에 실패했습니다.');

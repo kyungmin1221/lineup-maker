@@ -10,6 +10,7 @@ import {
   deleteLineup,
 } from '../firebase/lineupService';
 import { makeQuarter, C } from '../constants';
+import { trackEvent } from '../lib/analytics';
 
 const CACHE_KEY = 'lineup-maker:my-lineup-id';
 
@@ -68,6 +69,7 @@ export default function EntryPage() {
     try {
       const uid = await ensureSignedIn();
       const id = await createLineup(buildEmptyLineup(), uid);
+      trackEvent('create_lineup');
       navigate(`/edit/${id}`);
     } catch (err) {
       console.error(err);
