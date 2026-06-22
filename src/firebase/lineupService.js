@@ -5,6 +5,11 @@ import {
   updateDoc,
   onSnapshot,
   serverTimestamp,
+  collection,
+  query,
+  where,
+  limit,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "./config";
 
@@ -12,12 +17,13 @@ function generateId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export async function createLineup(lineupData) {
+export async function createLineup(lineupData, ownerId) {
   const id = generateId();
   const ref = doc(db, "lineups", id);
   await setDoc(ref, {
     ...lineupData,
     id,
+    ownerId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -34,6 +40,18 @@ export async function getLineup(id) {
 export async function updateLineup(id, data) {
   const ref = doc(db, "lineups", id);
   await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+}
+
+// 특정 사용자의 라인업 1개의 id를 반환 (없으면 null)
+export async function findMyLineupId(ownerId) {
+  const q = query(
+    collection(db, "lineups"),
+    where("ownerId", "==", ownerId),
+    limit(1)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  return snap.docs[0].id;
 }
 
 // 실시간 구독 - unsubscribe 함수 반환

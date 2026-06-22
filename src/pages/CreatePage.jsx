@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
 import Pitch from '../components/Pitch';
@@ -8,17 +9,75 @@ import Toast from '../components/Toast';
 import { useLineup } from '../hooks/useLineup';
 import { useToast } from '../hooks/useToast';
 import {
-  createLineup,
+  getLineup,
   updateLineup,
   addComment as saveComment,
   subscribeToLineup,
 } from '../firebase/lineupService';
+import { ensureSignedIn } from '../firebase/auth';
 import { C } from '../constants';
 
+const CACHE_KEY = 'lineup-maker:my-lineup-id';
+
 export default function CreatePage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [initialData, setInitialData] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+
+  // 진입 시 로그인 보장 + 라인업 로드
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const uid = await ensureSignedIn();
+        const data = await getLineup(id);
+        if (cancelled) return;
+        if (!data) {
+          setLoadError(true);
+          return;
+        }
+        // 본인 소유가 아니면 진입점으로 돌려보냄
+        if (data.ownerId && data.ownerId !== uid) {
+          navigate('/', { replace: true });
+          return;
+        }
+        localStorage.setItem(CACHE_KEY, id);
+        setInitialData(data);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setLoadError(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, navigate]);
+
+  if (loadError) {
+    return (
+      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 48, fontWeight: 800, color: C.blueLight, marginBottom: 8 }}>404</div>
+          <div style={{ fontSize: 14, color: C.muted }}>라인업을 찾을 수 없습니다.</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!initialData) {
+    return (
+      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontSize: 14, color: C.muted }}>불러오는 중...</div>
+      </div>
+    );
+  }
+
+  return <Editor id={id} initialData={initialData} />;
+}
+
+function Editor({ id, initialData }) {
   const [editingTeam, setEditingTeam] = useState(false);
-  const [savedId, setSavedId] = useState(null);
-  const [saving, setSaving] = useState(false);
   const { toast, showToast } = useToast();
 
   // onSnapshot이 트리거한 상태 변경에서 자동저장이 다시 실행되는 것을 방지
@@ -32,43 +91,34 @@ export default function CreatePage() {
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,
     addComment, syncRemoteComments,
-  } = useLineup();
+  } = useLineup(initialData);
 
-  // 저장된 후: 친구 댓글을 실시간으로 동기화
+  // 친구 댓글을 실시간으로 동기화
   useEffect(() => {
-    if (!savedId) return;
-    const unsub = subscribeToLineup(savedId, (remote) => {
+    const unsub = subscribeToLineup(id, (remote) => {
       if (remote?.quarters) {
-        skipNextSave.current = true; // 이 상태 변경으로 인한 자동저장 건너뜀
+        skipNextSave.current = true;
         syncRemoteComments(remote.quarters);
       }
     });
     return unsub;
-  }, [savedId, syncRemoteComments]);
+  }, [id, syncRemoteComments]);
 
-  // 라인업 변경 시 1초 후 자동 저장 (remote 업데이트 제외)
+  // 라인업 변경 시 1초 후 자동 저장
   useEffect(() => {
-    if (!savedId) return;
     if (skipNextSave.current) {
       skipNextSave.current = false;
       return;
     }
     const timer = setTimeout(() => {
-      updateLineup(savedId, { teamName, squad, quarters }).catch(console.error);
+      updateLineup(id, { teamName, squad, quarters }).catch(console.error);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [savedId, teamName, squad, quarters]);
+  }, [id, teamName, squad, quarters]);
 
-  // 공유 버튼: 최초엔 문서 생성, 이후엔 링크만 공유
+  // 공유 버튼: 링크 공유만
   const handleShare = async () => {
     try {
-      let id = savedId;
-      if (!id) {
-        setSaving(true);
-        id = await createLineup({ teamName, squad, quarters });
-        setSavedId(id);
-        setSaving(false);
-      }
       const url = `${window.location.origin}/view/${id}`;
       if (navigator.share) {
         await navigator.share({ title: `${teamName} 라인업`, url });
@@ -79,7 +129,6 @@ export default function CreatePage() {
     } catch (err) {
       if (err?.name === 'AbortError') return;
       console.error(err);
-      setSaving(false);
       showToast('오류가 발생했습니다.');
     }
   };
@@ -87,9 +136,7 @@ export default function CreatePage() {
   // 작성자 댓글: 로컬 + Firestore 동시 저장
   const handleAddComment = async (name, text) => {
     addComment(name, text);
-    if (savedId) {
-      await saveComment(savedId, activeIdx, { name, text }).catch(console.error);
-    }
+    await saveComment(id, activeIdx, { name, text }).catch(console.error);
   };
 
   return (
@@ -122,14 +169,6 @@ export default function CreatePage() {
 
         <Comments quarter={quarter} onAddComment={handleAddComment} />
       </div>
-
-      {saving && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,17,32,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 40 }}>
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '14px 24px', fontSize: 14, fontWeight: 500, color: C.text }}>
-            저장 중...
-          </div>
-        </div>
-      )}
 
       <Toast message={toast} />
     </div>
