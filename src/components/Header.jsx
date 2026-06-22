@@ -1,4 +1,4 @@
-import { Share2, ArrowLeft } from 'lucide-react';
+import { Share2, ArrowLeft, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { C } from '../constants';
 
@@ -29,24 +29,27 @@ export default function Header({
           라인업 메이커
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {!readOnly && (
-            <button
-              onClick={() => navigate('/')}
-              aria-label="홈으로"
-              style={{
-                background: 'none',
-                border: 'none',
-                color: C.text,
-                cursor: 'pointer',
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                flexShrink: 0,
-              }}
-            >
+          <button
+            onClick={() => navigate('/')}
+            aria-label={readOnly ? '메인 페이지로' : '내 라인업 목록으로'}
+            title={readOnly ? '메인 페이지로' : '내 라인업 목록으로'}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: C.text,
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {readOnly ? (
+              <Home size={24} strokeWidth={2.5} />
+            ) : (
               <ArrowLeft size={26} strokeWidth={2.5} />
-            </button>
-          )}
+            )}
+          </button>
           {!readOnly && editingTeam ? (
             <input
               autoFocus
