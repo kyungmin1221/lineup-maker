@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
 import Pitch from '../components/Pitch';
+import Bench from '../components/Bench';
 import Comments from '../components/Comments';
 import Toast from '../components/Toast';
 import { subscribeToLineup, addComment as saveComment } from '../firebase/lineupService';
@@ -62,6 +63,8 @@ export default function ViewPage() {
   }
 
   const quarter = lineup.quarters[activeIdx];
+  const placedIds = new Set(quarter.players.map((p) => p.playerId));
+  const bench = (lineup.squad || []).filter((p) => !placedIds.has(p.id));
 
   return (
     <div style={{ background: C.bg, minHeight: '100%', color: C.text }}>
@@ -94,6 +97,10 @@ export default function ViewPage() {
           onRemove={() => {}}
           readOnly
         />
+
+        <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
+
+        <Bench bench={bench} readOnly />
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
 
