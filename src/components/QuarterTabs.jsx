@@ -23,9 +23,9 @@ export default function QuarterTabs({ quarters, activeIdx, setActiveIdx, addQuar
               padding: '6px 14px',
               borderRadius: 99,
               fontSize: 13, fontWeight: active ? 600 : 500,
-              background: active ? C.blue : 'transparent',
-              color: active ? '#fff' : C.sub,
-              border: `1.5px solid ${active ? C.blue : C.border}`,
+              background: active ? C.accent : 'transparent',
+              color: active ? C.accentInk : C.sub,
+              border: `1.5px solid ${active ? C.accent : C.border}`,
               cursor: 'pointer', transition: 'all 0.15s',
             }}
           >

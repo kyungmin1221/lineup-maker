@@ -42,6 +42,11 @@ export default function CreatePage() {
           navigate('/', { replace: true });
           return;
         }
+        // ownerId 없는 옛 라인업은 현재 사용자 것으로 클레임
+        if (!data.ownerId) {
+          await updateLineup(id, { ownerId: uid }).catch(() => {});
+          data.ownerId = uid;
+        }
         localStorage.setItem(CACHE_KEY, id);
         setInitialData(data);
       } catch (err) {

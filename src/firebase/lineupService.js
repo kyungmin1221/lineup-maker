@@ -3,6 +3,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   serverTimestamp,
   collection,
@@ -42,6 +43,10 @@ export async function updateLineup(id, data) {
   await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
 }
 
+export async function deleteLineup(id) {
+  await deleteDoc(doc(db, "lineups", id));
+}
+
 // 특정 사용자의 라인업 1개의 id를 반환 (없으면 null)
 export async function findMyLineupId(ownerId) {
   const q = query(
@@ -52,6 +57,25 @@ export async function findMyLineupId(ownerId) {
   const snap = await getDocs(q);
   if (snap.empty) return null;
   return snap.docs[0].id;
+}
+
+// 특정 사용자의 라인업 목록 반환 (최근 수정 순)
+export async function findMyLineups(ownerId) {
+  const q = query(
+    collection(db, "lineups"),
+    where("ownerId", "==", ownerId)
+  );
+  const snap = await getDocs(q);
+  const items = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      teamName: data.teamName || '',
+      updatedAt: data.updatedAt?.toMillis?.() ?? 0,
+    };
+  });
+  items.sort((a, b) => b.updatedAt - a.updatedAt);
+  return items;
 }
 
 // 실시간 구독 - unsubscribe 함수 반환
