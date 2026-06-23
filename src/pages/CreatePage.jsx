@@ -92,7 +92,8 @@ function Editor({ id, initialData }) {
   const {
     teamName, setTeamName,
     squad, quarters, activeIdx, setActiveIdx,
-    quarter, bench,
+    phase, setPhase,
+    quarter, bench, displayPlayers,
     addToPitch, removeFromPitch, dragPlayer,
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,
@@ -163,8 +164,9 @@ function Editor({ id, initialData }) {
         />
 
         <Pitch
-          placedPlayers={quarter.players} squad={squad}
+          placedPlayers={displayPlayers} squad={squad}
           onDrag={dragPlayer} onRemove={removeFromPitch} readOnly={false}
+          phase={phase} setPhase={setPhase}
         />
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />

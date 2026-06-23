@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { C } from '../constants';
 
-export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly }) {
+export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly, phase, setPhase }) {
   const pitchRef = useRef(null);
   const dragging = useRef(null);
 
@@ -45,6 +45,49 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
         {/* border */}
         <div style={{ position:'absolute', inset:0, borderRadius:16, border:`1.5px solid ${L}`, pointerEvents:'none', zIndex:5 }} />
 
+        {/* phase toggle (기본/공격/수비) */}
+        {phase && setPhase && (
+          <div
+            style={{
+              position: 'absolute', top: 10, right: 10, zIndex: 20,
+              display: 'flex',
+              background: 'rgba(11,17,32,0.7)',
+              border: `1px solid ${C.borderMid}`,
+              borderRadius: 999,
+              padding: 3,
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            {[
+              { key: 'base', label: '기본' },
+              { key: 'attack', label: '공격' },
+              { key: 'defense', label: '수비' },
+            ].map(({ key, label }) => {
+              const active = phase === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setPhase(key)}
+                  style={{
+                    padding: '5px 11px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: active ? C.accent : 'transparent',
+                    color: active ? C.accentInk : C.sub,
+                    fontSize: 12,
+                    fontWeight: active ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* halfway */}
         <div style={{ position:'absolute', left:0, right:0, top:'50%', height:1, background:L }} />
 
@@ -73,6 +116,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
                 position: 'absolute',
                 left: `${p.x}%`, top: `${p.y}%`,
                 transform: 'translate(-50%,-50%)',
+                transition: 'left 0.3s ease, top 0.3s ease',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 cursor: readOnly ? 'default' : 'grab',
                 zIndex: 10,

@@ -20,10 +20,22 @@ export function useLineup(initialData) {
     ]
   );
   const [activeIdx, setActiveIdx] = useState(0);
+  const [phase, setPhase] = useState('base'); // 'base' | 'attack' | 'defense'
 
   const quarter = quarters[activeIdx];
   const placedIds = new Set(quarter.players.map((p) => p.playerId));
   const bench = squad.filter((p) => !placedIds.has(p.id));
+
+  // phase에 따라 표시할 좌표로 변환 (없으면 기본 좌표 fallback)
+  const displayPlayers = quarter.players.map((p) => {
+    if (phase === 'attack') {
+      return { ...p, x: p.attackX ?? p.x, y: p.attackY ?? p.y };
+    }
+    if (phase === 'defense') {
+      return { ...p, x: p.defenseX ?? p.x, y: p.defenseY ?? p.y };
+    }
+    return p;
+  });
 
   const updatePlayers = useCallback(
     (players) => {
@@ -77,15 +89,18 @@ export function useLineup(initialData) {
           i === activeIdx
             ? {
                 ...q,
-                players: q.players.map((p) =>
-                  p.playerId === playerId ? { ...p, x, y } : p
-                ),
+                players: q.players.map((p) => {
+                  if (p.playerId !== playerId) return p;
+                  if (phase === 'attack') return { ...p, attackX: x, attackY: y };
+                  if (phase === 'defense') return { ...p, defenseX: x, defenseY: y };
+                  return { ...p, x, y };
+                }),
               }
             : q
         )
       );
     },
-    [activeIdx]
+    [activeIdx, phase]
   );
 
   const deleteFromSquad = useCallback((playerId) => {
@@ -158,8 +173,11 @@ export function useLineup(initialData) {
     quarters,
     activeIdx,
     setActiveIdx,
+    phase,
+    setPhase,
     quarter,
     bench,
+    displayPlayers,
     addToPitch,
     removeFromPitch,
     dragPlayer,

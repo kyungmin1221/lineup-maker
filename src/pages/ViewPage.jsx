@@ -16,6 +16,7 @@ export default function ViewPage() {
   const [lineup, setLineup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [phase, setPhase] = useState('base');
   const { toast, showToast } = useToast();
   const viewTracked = useRef(false);
 
@@ -65,6 +66,11 @@ export default function ViewPage() {
   const quarter = lineup.quarters[activeIdx];
   const placedIds = new Set(quarter.players.map((p) => p.playerId));
   const bench = (lineup.squad || []).filter((p) => !placedIds.has(p.id));
+  const displayPlayers = quarter.players.map((p) => {
+    if (phase === 'attack') return { ...p, x: p.attackX ?? p.x, y: p.attackY ?? p.y };
+    if (phase === 'defense') return { ...p, x: p.defenseX ?? p.x, y: p.defenseY ?? p.y };
+    return p;
+  });
 
   return (
     <div style={{ background: C.bg, minHeight: '100%', color: C.text }}>
@@ -91,11 +97,13 @@ export default function ViewPage() {
         />
 
         <Pitch
-          placedPlayers={quarter.players}
+          placedPlayers={displayPlayers}
           squad={lineup.squad}
           onDrag={() => {}}
           onRemove={() => {}}
           readOnly
+          phase={phase}
+          setPhase={setPhase}
         />
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
