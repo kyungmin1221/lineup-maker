@@ -1,9 +1,10 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { C } from '../constants';
 
 export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly, phase, setPhase }) {
   const pitchRef = useRef(null);
   const dragging = useRef(null);
+  const [draggingId, setDraggingId] = useState(null);
 
   useEffect(() => {
     const move = e => {
@@ -15,7 +16,10 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
       const y = Math.max(5, Math.min(95, ((pt.clientY - rect.top) / rect.height) * 100));
       onDrag(dragging.current, x, y);
     };
-    const up = () => { dragging.current = null; };
+    const up = () => {
+      dragging.current = null;
+      setDraggingId(null);
+    };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('touchmove', move, { passive: false });
@@ -111,12 +115,16 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
             <div
               key={p.playerId}
               className="lm-token"
-              onPointerDown={readOnly ? undefined : e => { e.preventDefault(); dragging.current = p.playerId; }}
+              onPointerDown={readOnly ? undefined : e => {
+                e.preventDefault();
+                dragging.current = p.playerId;
+                setDraggingId(p.playerId);
+              }}
               style={{
                 position: 'absolute',
                 left: `${p.x}%`, top: `${p.y}%`,
                 transform: 'translate(-50%,-50%)',
-                transition: 'left 0.3s ease, top 0.3s ease',
+                transition: draggingId === p.playerId ? 'none' : 'left 0.3s ease, top 0.3s ease',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 cursor: readOnly ? 'default' : 'grab',
                 zIndex: 10,
