@@ -91,9 +91,9 @@ export default function Bench({ bench, onAddToPitch, onDeleteFromSquad, onAddPla
             value={number}
             onChange={e => setNumber(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="번호"
+            placeholder="번호/포지션"
             style={{
-              width: 52, background: 'transparent', border: 'none', outline: 'none',
+              width: 95, background: 'transparent', border: 'none', outline: 'none',
               padding: '12px 8px', fontSize: 14, color: C.text, textAlign: 'center',
             }}
           />
