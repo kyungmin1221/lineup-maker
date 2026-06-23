@@ -4,13 +4,11 @@ import { C } from '../constants';
 
 export default function Bench({ bench, onAddToPitch, onDeleteFromSquad, onAddPlayer, readOnly }) {
   const [name, setName] = useState('');
-  const [number, setNumber] = useState('');
 
   const handleAdd = () => {
     if (!name.trim()) return;
-    onAddPlayer(name.trim(), number.trim() || '-');
+    onAddPlayer(name.trim(), '-');
     setName('');
-    setNumber('');
   };
 
   return (
@@ -37,15 +35,16 @@ export default function Bench({ bench, onAddToPitch, onDeleteFromSquad, onAddPla
                 cursor: readOnly ? 'default' : 'pointer',
               }}
             >
-              {/* number badge */}
+              {/* substitute badge */}
               <span style={{
-                width: 28, height: 28, borderRadius: 8,
+                height: 24, borderRadius: 6,
+                padding: '0 6px',
                 background: C.raised,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, fontWeight: 700, color: C.blueLight,
+                fontSize: 11, fontWeight: 700, color: C.blueLight,
                 flexShrink: 0,
               }}>
-                {p.number}
+                교체
               </span>
               <span style={{ fontSize: 13, fontWeight: 500, color: C.text, whiteSpace: 'nowrap' }}>
                 {p.name}
@@ -84,17 +83,6 @@ export default function Bench({ bench, onAddToPitch, onDeleteFromSquad, onAddPla
             style={{
               flex: 1, background: 'transparent', border: 'none', outline: 'none',
               padding: '12px 14px', fontSize: 14, color: C.text,
-            }}
-          />
-          <div style={{ width: 1, height: 20, background: C.border }} />
-          <input
-            value={number}
-            onChange={e => setNumber(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="번호/포지션"
-            style={{
-              width: 95, background: 'transparent', border: 'none', outline: 'none',
-              padding: '12px 8px', fontSize: 14, color: C.text, textAlign: 'center',
             }}
           />
           <button
