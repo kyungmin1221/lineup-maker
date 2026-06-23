@@ -291,7 +291,7 @@ export default function MyLineupsPage() {
             marginBottom: 0,
           }}
         >
-          곧 로그인 · 친구 라인업 둘러보기 기능이 추가될 예정입니다
+          Made By Kyungmin
         </p>
       </div>
     </div>
