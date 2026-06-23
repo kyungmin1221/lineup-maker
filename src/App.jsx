@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import EntryPage from "./pages/EntryPage";
+import MyLineupsPage from "./pages/MyLineupsPage";
 import CreatePage from "./pages/CreatePage";
 import ViewPage from "./pages/ViewPage";
 import { trackPageView } from "./lib/analytics";
@@ -20,6 +21,7 @@ export default function App() {
       <RouteTracker />
       <Routes>
         <Route path="/" element={<EntryPage />} />
+        <Route path="/my" element={<MyLineupsPage />} />
         <Route path="/edit/:id" element={<CreatePage />} />
         <Route path="/view/:id" element={<ViewPage />} />
       </Routes>

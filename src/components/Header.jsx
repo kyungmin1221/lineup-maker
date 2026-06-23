@@ -30,7 +30,7 @@ export default function Header({
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/my')}
             aria-label="뒤로"
             title="뒤로"
             style={{

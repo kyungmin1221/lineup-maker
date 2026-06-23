@@ -107,6 +107,36 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
         <div style={{ position:'absolute', left:'20%', bottom:0, width:'60%', height:'16%', border:`1px solid ${L}`, borderBottom:'none' }} />
         <div style={{ position:'absolute', left:'36%', bottom:0, width:'28%', height:'7%', border:`1px solid ${L}`, borderBottom:'none' }} />
 
+        {/* empty state hint */}
+        {placedPlayers.length === 0 && !readOnly && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+              zIndex: 6,
+            }}
+          >
+            <div
+              style={{
+                color: 'rgba(255,255,255,0.45)',
+                fontSize: 14,
+                fontWeight: 500,
+                background: 'rgba(11,17,32,0.35)',
+                padding: '8px 16px',
+                borderRadius: 999,
+                backdropFilter: 'blur(4px)',
+                WebkitBackdropFilter: 'blur(4px)',
+              }}
+            >
+              선수를 추가해보세요
+            </div>
+          </div>
+        )}
+
         {/* players */}
         {placedPlayers.map(p => {
           const info = byId(p.playerId);
