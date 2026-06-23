@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Link2, ArrowRight, Trash2 } from 'lucide-react';
+import { Link2, ArrowRight } from 'lucide-react';
 import { ensureSignedIn } from '../firebase/auth';
 import {
   createLineup,
   findMyLineups,
   getLineup,
   updateLineup,
-  deleteLineup,
 } from '../firebase/lineupService';
 import { makeQuarter, C } from '../constants';
-import { trackEvent } from '../lib/analytics';
 
 const CACHE_KEY = 'lineup-maker:my-lineup-id';
 
@@ -69,27 +67,10 @@ export default function EntryPage() {
     try {
       const uid = await ensureSignedIn();
       const id = await createLineup(buildEmptyLineup(), uid);
-      trackEvent('create_lineup');
       navigate(`/edit/${id}`);
     } catch (err) {
       console.error(err);
       setCreating(false);
-    }
-  };
-
-  const handleDelete = async (lineup) => {
-    const label = lineup.teamName || '이름 없는 라인업';
-    const ok = window.confirm(`"${label}" 라인업을 삭제할까요?\n삭제하면 되돌릴 수 없어요.`);
-    if (!ok) return;
-    try {
-      await deleteLineup(lineup.id);
-      setMyLineups((prev) => prev.filter((x) => x.id !== lineup.id));
-      if (localStorage.getItem(CACHE_KEY) === lineup.id) {
-        localStorage.removeItem(CACHE_KEY);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('삭제에 실패했습니다.');
     }
   };
 
@@ -123,7 +104,7 @@ export default function EntryPage() {
           style={{
             fontSize: 56,
             fontWeight: 900,
-            color: C.accentSoft,
+            color: C.accent,
             lineHeight: 1.05,
             margin: 0,
             letterSpacing: '-0.02em',
@@ -209,17 +190,9 @@ export default function EntryPage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {myLineups.map((lu) => (
-                  <div
+                  <button
                     key={lu.id}
-                    role="button"
-                    tabIndex={0}
                     onClick={() => navigate(`/edit/${lu.id}`)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        navigate(`/edit/${lu.id}`);
-                      }
-                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -228,7 +201,7 @@ export default function EntryPage() {
                       background: C.surface,
                       border: `1px solid ${C.border}`,
                       borderRadius: 12,
-                      padding: '12px 12px 12px 20px',
+                      padding: '16px 20px',
                       color: C.text,
                       fontSize: 16,
                       fontWeight: 600,
@@ -247,8 +220,6 @@ export default function EntryPage() {
                   >
                     <span
                       style={{
-                        flex: 1,
-                        minWidth: 0,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -257,110 +228,17 @@ export default function EntryPage() {
                     >
                       {lu.teamName || '이름 없는 라인업'}
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 12 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: C.sub }}>
-                        열기
-                        <ArrowRight size={14} />
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(lu);
-                        }}
-                        aria-label="라인업 삭제"
-                        title="라인업 삭제"
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 32,
-                          height: 32,
-                          background: 'transparent',
-                          border: 'none',
-                          borderRadius: 8,
-                          color: C.muted,
-                          cursor: 'pointer',
-                          transition: 'color 0.15s, background 0.15s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#ef4444';
-                          e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = C.muted;
-                          e.currentTarget.style.background = 'transparent';
-                        }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: C.sub }}>
+                      열기
+                      <ArrowRight size={14} />
+                    </span>
+                  </button>
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {/* Open by share link / ID */}
-        <div style={{ marginTop: 40 }}>
-          <form onSubmit={handleOpenById}>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
-                color: C.sub,
-                cursor: 'pointer',
-                marginBottom: 8,
-              }}
-            >
-              <Link2 size={14} />
-              공유 링크(ID)로 라인업 열기
-            </label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                value={openInput}
-                onChange={(e) => {
-                  setOpenInput(e.target.value);
-                  if (openError) setOpenError('');
-                }}
-                placeholder="링크 또는 ID 붙여넣기"
-                style={{
-                  flex: 1,
-                  background: C.surface,
-                  border: `1px solid ${openError ? '#ef4444' : C.border}`,
-                  borderRadius: 10,
-                  padding: '10px 14px',
-                  fontSize: 13,
-                  color: C.text,
-                  outline: 'none',
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  background: 'transparent',
-                  border: `1px solid ${C.border}`,
-                  borderRadius: 10,
-                  padding: '10px 16px',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: C.text,
-                  cursor: 'pointer',
-                }}
-              >
-                열기
-              </button>
-            </div>
-            {openError && (
-              <p style={{ fontSize: 12, color: '#ef4444', marginTop: 6, marginBottom: 0 }}>
-                {openError}
-              </p>
-            )}
-          </form>
-        </div>
 
         {/* Footer hint */}
         <p
@@ -372,7 +250,7 @@ export default function EntryPage() {
             marginBottom: 0,
           }}
         >
-          곧 로그인 · 친구 라인업 둘러보기 기능이 추가될 예정입니다
+          Made By Kyungmin
         </p>
       </div>
     </div>
