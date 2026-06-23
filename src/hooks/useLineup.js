@@ -82,6 +82,30 @@ export function useLineup(initialData) {
     [quarter, updatePlayers]
   );
 
+  // 현재 쿼터에서만 해당 선수의 라벨 override (빈 값이면 라벨 제거 → 기본값으로 복귀)
+  const setPlayerLabel = useCallback(
+    (playerId, label) => {
+      setQuarters((qs) =>
+        qs.map((q, i) => {
+          if (i !== activeIdx) return q;
+          return {
+            ...q,
+            players: q.players.map((p) => {
+              if (p.playerId !== playerId) return p;
+              const trimmed = (label ?? '').trim();
+              if (!trimmed) {
+                const { label: _omit, ...rest } = p;
+                return rest;
+              }
+              return { ...p, label: trimmed };
+            }),
+          };
+        })
+      );
+    },
+    [activeIdx]
+  );
+
   const dragPlayer = useCallback(
     (playerId, x, y) => {
       setQuarters((qs) =>
@@ -181,6 +205,7 @@ export function useLineup(initialData) {
     addToPitch,
     removeFromPitch,
     dragPlayer,
+    setPlayerLabel,
     deleteFromSquad,
     addPlayer,
     addQuarter,

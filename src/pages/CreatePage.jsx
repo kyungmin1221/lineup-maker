@@ -94,7 +94,7 @@ function Editor({ id, initialData }) {
     squad, quarters, activeIdx, setActiveIdx,
     phase, setPhase,
     quarter, bench, displayPlayers,
-    addToPitch, removeFromPitch, dragPlayer,
+    addToPitch, removeFromPitch, dragPlayer, setPlayerLabel,
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,
     addComment, syncRemoteComments,
@@ -165,7 +165,9 @@ function Editor({ id, initialData }) {
 
         <Pitch
           placedPlayers={displayPlayers} squad={squad}
-          onDrag={dragPlayer} onRemove={removeFromPitch} readOnly={false}
+          onDrag={dragPlayer} onRemove={removeFromPitch}
+          onLabelChange={setPlayerLabel}
+          readOnly={false}
           phase={phase} setPhase={setPhase}
         />
 

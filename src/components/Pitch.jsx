@@ -1,23 +1,47 @@
 import { useRef, useEffect, useState } from 'react';
 import { C } from '../constants';
 
-export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly, phase, setPhase }) {
+const TAP_MOVE_THRESHOLD = 5; // 픽셀: 이만큼 안 움직였으면 탭으로 간주
+
+export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase }) {
   const pitchRef = useRef(null);
   const dragging = useRef(null);
+  const downPos = useRef(null);     // pointerdown 시점 좌표
+  const didMove = useRef(false);    // 임계값 이상 움직였는지
   const [draggingId, setDraggingId] = useState(null);
+  const [editingPlayerId, setEditingPlayerId] = useState(null);
 
   useEffect(() => {
     const move = e => {
       if (!dragging.current) return;
-      e.preventDefault();
-      const rect = pitchRef.current.getBoundingClientRect();
       const pt = e.touches ? e.touches[0] : e;
-      const x = Math.max(5, Math.min(95, ((pt.clientX - rect.left) / rect.width) * 100));
-      const y = Math.max(5, Math.min(95, ((pt.clientY - rect.top) / rect.height) * 100));
-      onDrag(dragging.current, x, y);
+
+      // 움직임 임계값 검사 — 탭/드래그 구분
+      if (!didMove.current && downPos.current) {
+        const dx = Math.abs(pt.clientX - downPos.current.x);
+        const dy = Math.abs(pt.clientY - downPos.current.y);
+        if (dx > TAP_MOVE_THRESHOLD || dy > TAP_MOVE_THRESHOLD) {
+          didMove.current = true;
+        }
+      }
+
+      // 실제로 움직였을 때만 드래그 처리 + preventDefault
+      if (didMove.current) {
+        e.preventDefault();
+        const rect = pitchRef.current.getBoundingClientRect();
+        const x = Math.max(5, Math.min(95, ((pt.clientX - rect.left) / rect.width) * 100));
+        const y = Math.max(5, Math.min(95, ((pt.clientY - rect.top) / rect.height) * 100));
+        onDrag(dragging.current, x, y);
+      }
     };
     const up = () => {
+      // 탭으로 끝났다면 라벨 편집 모달 열기
+      if (dragging.current && !didMove.current && !readOnly && onLabelChange) {
+        setEditingPlayerId(dragging.current);
+      }
       dragging.current = null;
+      downPos.current = null;
+      didMove.current = false;
       setDraggingId(null);
     };
     window.addEventListener('pointermove', move);
@@ -30,7 +54,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
     };
-  }, [onDrag]);
+  }, [onDrag, onLabelChange, readOnly]);
 
   const byId = id => squad.find(p => p.id === id);
   const L = C.pitchLine;
@@ -148,6 +172,8 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
               onPointerDown={readOnly ? undefined : e => {
                 e.preventDefault();
                 dragging.current = p.playerId;
+                downPos.current = { x: e.clientX, y: e.clientY };
+                didMove.current = false;
                 setDraggingId(p.playerId);
               }}
               style={{
@@ -168,10 +194,11 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
                   border: `2.5px solid ${C.blueLight}`,
                   boxShadow: `0 0 0 3px ${C.blue}35, 0 3px 10px rgba(0,0,0,0.5)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: info.number.length > 2 ? 11 : 14,
+                  fontWeight: 700,
+                  fontSize: ((p.label || info.number) + '').length > 2 ? 11 : 14,
                   color: '#fff',
                 }}>
-                  {info.number}
+                  {p.label || info.number}
                 </div>
 
                 {!readOnly && (
@@ -205,6 +232,120 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, readOnly
             </div>
           );
         })}
+      </div>
+
+      {editingPlayerId && (() => {
+        const target = placedPlayers.find((p) => p.playerId === editingPlayerId);
+        const info = target ? byId(target.playerId) : null;
+        if (!target || !info) return null;
+        return (
+          <LabelEditModal
+            playerName={info.name}
+            currentLabel={target.label || ''}
+            defaultLabel={info.number}
+            onSave={(newLabel) => {
+              onLabelChange(editingPlayerId, newLabel);
+              setEditingPlayerId(null);
+            }}
+            onReset={() => {
+              onLabelChange(editingPlayerId, '');
+              setEditingPlayerId(null);
+            }}
+            onClose={() => setEditingPlayerId(null)}
+          />
+        );
+      })()}
+    </div>
+  );
+}
+
+function LabelEditModal({ playerName, currentLabel, defaultLabel, onSave, onReset, onClose }) {
+  const [value, setValue] = useState(currentLabel);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.surface,
+          border: `1px solid ${C.borderMid}`,
+          borderRadius: 16,
+          padding: '24px 24px 20px',
+          width: '100%', maxWidth: 320,
+          boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+        }}
+      >
+        <p style={{ margin: 0, marginBottom: 4, fontSize: 13, color: C.sub }}>
+          이번 쿼터 라벨
+        </p>
+        <p style={{ margin: 0, marginBottom: 16, fontSize: 18, fontWeight: 700, color: C.text }}>
+          {playerName}
+        </p>
+
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onSave(value);
+            if (e.key === 'Escape') onClose();
+          }}
+          maxLength={4}
+          placeholder={`기본값: ${defaultLabel || '-'}`}
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: C.bg, border: `1px solid ${C.borderMid}`,
+            borderRadius: 10, padding: '12px 14px',
+            fontSize: 16, color: C.text, outline: 'none',
+            marginBottom: 8,
+          }}
+        />
+        <p style={{ margin: 0, marginBottom: 20, fontSize: 11, color: C.muted }}>
+          비워두면 기본값 ({defaultLabel || '-'}) 사용
+        </p>
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center' }}>
+          <button
+            onClick={onReset}
+            style={{
+              padding: '8px 14px', borderRadius: 8,
+              border: 'none', background: 'transparent',
+              color: C.sub, fontSize: 13, cursor: 'pointer',
+            }}
+          >
+            기본값으로
+          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '8px 16px', borderRadius: 8,
+                border: `1px solid ${C.borderMid}`, background: 'transparent',
+                color: C.sub, fontSize: 13, cursor: 'pointer',
+              }}
+            >
+              취소
+            </button>
+            <button
+              onClick={() => onSave(value)}
+              style={{
+                padding: '8px 18px', borderRadius: 8,
+                border: 'none', background: C.accent,
+                color: C.accentInk, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              완료
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
