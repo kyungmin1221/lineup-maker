@@ -1,4 +1,4 @@
-import { Share2, ArrowLeft, Home } from 'lucide-react';
+import { Share2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { C } from '../constants';
 
@@ -31,8 +31,8 @@ export default function Header({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => navigate('/')}
-            aria-label={readOnly ? '메인 페이지로' : '내 라인업 목록으로'}
-            title={readOnly ? '메인 페이지로' : '내 라인업 목록으로'}
+            aria-label="뒤로"
+            title="뒤로"
             style={{
               background: 'none',
               border: 'none',
@@ -44,11 +44,7 @@ export default function Header({
               flexShrink: 0,
             }}
           >
-            {readOnly ? (
-              <Home size={24} strokeWidth={2.5} />
-            ) : (
-              <ArrowLeft size={26} strokeWidth={2.5} />
-            )}
+            <ArrowLeft size={26} strokeWidth={2.5} />
           </button>
           {!readOnly && editingTeam ? (
             <input
