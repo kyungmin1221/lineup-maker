@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
+import FormationChips from '../components/FormationChips';
 import Pitch from '../components/Pitch';
 import Bench from '../components/Bench';
 import Comments from '../components/Comments';
@@ -16,9 +17,25 @@ import {
 } from '../firebase/lineupService';
 import { ensureSignedIn } from '../firebase/auth';
 import { trackEvent } from '../lib/analytics';
-import { C } from '../constants';
+import { C, nextId } from '../constants';
 
 const CACHE_KEY = 'lineup-maker:my-lineup-id';
+
+// 옛 nextId 버그로 인한 squad 중복 ID 자동 복구
+function dedupeSquadIds(squad) {
+  if (!Array.isArray(squad)) return { squad, changed: false };
+  const seen = new Set();
+  let changed = false;
+  const cleaned = squad.map((p) => {
+    if (seen.has(p.id)) {
+      changed = true;
+      return { ...p, id: nextId() };
+    }
+    seen.add(p.id);
+    return p;
+  });
+  return { squad: cleaned, changed };
+}
 
 export default function CreatePage() {
   const { id } = useParams();
@@ -47,6 +64,12 @@ export default function CreatePage() {
         if (!data.ownerId) {
           await updateLineup(id, { ownerId: uid }).catch(() => {});
           data.ownerId = uid;
+        }
+        // squad 중복 ID 복구 (있을 경우 Firestore에도 즉시 반영)
+        const dedup = dedupeSquadIds(data.squad);
+        if (dedup.changed) {
+          data.squad = dedup.squad;
+          await updateLineup(id, { squad: dedup.squad }).catch(console.error);
         }
         localStorage.setItem(CACHE_KEY, id);
         setInitialData(data);
@@ -94,7 +117,7 @@ function Editor({ id, initialData }) {
     squad, quarters, activeIdx, setActiveIdx,
     phase, setPhase,
     quarter, bench, displayPlayers,
-    addToPitch, removeFromPitch, dragPlayer, setPlayerLabel,
+    addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,
     addComment, syncRemoteComments,
@@ -163,12 +186,18 @@ function Editor({ id, initialData }) {
           addQuarter={addQuarter} removeQuarter={removeQuarter} readOnly={false}
         />
 
+        <FormationChips
+          activeFormation={quarter.formations?.[phase]}
+          onApply={applyFormation}
+        />
+
         <Pitch
           placedPlayers={displayPlayers} squad={squad}
           onDrag={dragPlayer} onRemove={removeFromPitch}
           onLabelChange={setPlayerLabel}
           readOnly={false}
           phase={phase} setPhase={setPhase}
+          formation={quarter.formations?.[phase]}
         />
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />

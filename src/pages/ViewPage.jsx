@@ -104,6 +104,7 @@ export default function ViewPage() {
           readOnly
           phase={phase}
           setPhase={setPhase}
+          formation={quarter.formations?.[phase]}
         />
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />

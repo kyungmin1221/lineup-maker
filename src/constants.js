@@ -19,8 +19,9 @@ export const C = {
   pitchLine:   'rgba(255,255,255,0.35)',
 };
 
-let _uid = 100;
-export const nextId = () => String(++_uid);
+// 모듈 메모리 카운터는 새로고침 시 리셋되어 ID 충돌을 일으킴 → 랜덤 기반으로 변경
+export const nextId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
 export const STARTER_SQUAD = [
   { id: '1',  name: '유상엽', number: '1'  },
@@ -57,3 +58,41 @@ export const STARTER_LAYOUT = [
 export function makeQuarter(label, players = []) {
   return { id: nextId(), label, players, comments: [] };
 }
+
+// 포메이션 프리셋 — 좌표는 % 단위 (0~100). 첫 슬롯은 항상 GK.
+export const FORMATIONS = {
+  '4-3-3': [
+    { x: 50, y: 90 },
+    { x: 18, y: 76 }, { x: 38, y: 80 }, { x: 62, y: 80 }, { x: 82, y: 76 },
+    { x: 30, y: 56 }, { x: 50, y: 60 }, { x: 70, y: 56 },
+    { x: 25, y: 30 }, { x: 50, y: 22 }, { x: 75, y: 30 },
+  ],
+  '4-4-2': [
+    { x: 50, y: 90 },
+    { x: 18, y: 76 }, { x: 38, y: 80 }, { x: 62, y: 80 }, { x: 82, y: 76 },
+    { x: 18, y: 54 }, { x: 38, y: 58 }, { x: 62, y: 58 }, { x: 82, y: 54 },
+    { x: 38, y: 24 }, { x: 62, y: 24 },
+  ],
+  '4-2-3-1': [
+    { x: 50, y: 90 },
+    { x: 18, y: 76 }, { x: 38, y: 80 }, { x: 62, y: 80 }, { x: 82, y: 76 },
+    { x: 35, y: 62 }, { x: 65, y: 62 },
+    { x: 25, y: 40 }, { x: 50, y: 38 }, { x: 75, y: 40 },
+    { x: 50, y: 20 },
+  ],
+  '3-5-2': [
+    { x: 50, y: 90 },
+    { x: 28, y: 78 }, { x: 50, y: 80 }, { x: 72, y: 78 },
+    { x: 14, y: 58 }, { x: 86, y: 58 },
+    { x: 32, y: 56 }, { x: 50, y: 60 }, { x: 68, y: 56 },
+    { x: 38, y: 24 }, { x: 62, y: 24 },
+  ],
+  '5-3-2': [
+    { x: 50, y: 90 },
+    { x: 14, y: 72 }, { x: 30, y: 80 }, { x: 50, y: 82 }, { x: 70, y: 80 }, { x: 86, y: 72 },
+    { x: 30, y: 54 }, { x: 50, y: 58 }, { x: 70, y: 54 },
+    { x: 38, y: 24 }, { x: 62, y: 24 },
+  ],
+};
+
+export const FORMATION_KEYS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2'];

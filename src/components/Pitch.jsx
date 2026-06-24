@@ -1,9 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
-import { C } from '../constants';
+import { C, FORMATIONS } from '../constants';
 
 const TAP_MOVE_THRESHOLD = 5; // 픽셀: 이만큼 안 움직였으면 탭으로 간주
 
-export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase }) {
+export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase, formation }) {
   const pitchRef = useRef(null);
   const dragging = useRef(null);
   const downPos = useRef(null);     // pointerdown 시점 좌표
@@ -130,6 +130,47 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
         {/* bottom box */}
         <div style={{ position:'absolute', left:'20%', bottom:0, width:'60%', height:'16%', border:`1px solid ${L}`, borderBottom:'none' }} />
         <div style={{ position:'absolute', left:'36%', bottom:0, width:'28%', height:'7%', border:`1px solid ${L}`, borderBottom:'none' }} />
+
+        {/* empty formation slot ghosts — 각 선수에게 가장 가까운 슬롯을 1:1 배정 후 남은 슬롯만 ghost */}
+        {formation && FORMATIONS[formation] && placedPlayers.length < FORMATIONS[formation].length && (() => {
+          const slots = FORMATIONS[formation];
+          const occupied = new Set();
+
+          // 각 선수가 가장 가까운 미점유 슬롯을 차지 (그리디)
+          placedPlayers.forEach((p) => {
+            let bestIdx = -1;
+            let bestDist = Infinity;
+            slots.forEach((slot, slotIdx) => {
+              if (occupied.has(slotIdx)) return;
+              const d = (p.x - slot.x) ** 2 + (p.y - slot.y) ** 2;
+              if (d < bestDist) {
+                bestDist = d;
+                bestIdx = slotIdx;
+              }
+            });
+            if (bestIdx !== -1) occupied.add(bestIdx);
+          });
+
+          return slots.map((slot, idx) => {
+            if (occupied.has(idx)) return null;
+            return (
+              <div
+                key={`ghost-${idx}`}
+                style={{
+                  position: 'absolute',
+                  left: `${slot.x}%`, top: `${slot.y}%`,
+                  transform: 'translate(-50%,-50%)',
+                  width: 38, height: 38,
+                  borderRadius: '50%',
+                  border: '2px dashed rgba(255,255,255,0.32)',
+                  background: 'rgba(255,255,255,0.05)',
+                  pointerEvents: 'none',
+                  zIndex: 7,
+                }}
+              />
+            );
+          });
+        })()}
 
         {/* empty state hint */}
         {placedPlayers.length === 0 && !readOnly && (

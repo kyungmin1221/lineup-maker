@@ -4,6 +4,7 @@ import {
   STARTER_LAYOUT,
   makeQuarter,
   nextId,
+  FORMATIONS,
 } from '../constants';
 
 export function useLineup(initialData) {
@@ -80,6 +81,97 @@ export function useLineup(initialData) {
       updatePlayers(quarter.players.filter((p) => p.playerId !== playerId));
     },
     [quarter, updatePlayers]
+  );
+
+  // 현재 쿼터의 현재 phase에 포메이션 적용
+  // 1) 필드 선수를 가장 가까운 슬롯에 그리디 매칭
+  // 2) 남은 빈 슬롯에 벤치 선수를 순서대로 자동 배치
+  // 3) 그래도 부족하면 ghost로 남김
+  const applyFormation = useCallback(
+    (formationKey) => {
+      const slots = FORMATIONS[formationKey];
+      if (!slots) return;
+
+      setQuarters((qs) =>
+        qs.map((q, i) => {
+          if (i !== activeIdx) return q;
+
+          const phaseCoords = (p) => {
+            if (phase === 'attack') return { x: p.attackX ?? p.x, y: p.attackY ?? p.y };
+            if (phase === 'defense') return { x: p.defenseX ?? p.x, y: p.defenseY ?? p.y };
+            return { x: p.x, y: p.y };
+          };
+
+          // Step 1: 슬롯별 선수 할당 (slotIdx -> playerId)
+          const slotToPlayerId = new Array(slots.length).fill(null);
+
+          // 기존 필드 선수를 가장 가까운 슬롯에 그리디 매칭
+          const remaining = q.players.map((p) => p);
+          slots.forEach((slot, slotIdx) => {
+            if (remaining.length === 0) return;
+            let bestI = 0;
+            let bestDist = Infinity;
+            remaining.forEach((p, ri) => {
+              const c = phaseCoords(p);
+              const d = (c.x - slot.x) ** 2 + (c.y - slot.y) ** 2;
+              if (d < bestDist) {
+                bestDist = d;
+                bestI = ri;
+              }
+            });
+            slotToPlayerId[slotIdx] = remaining[bestI].playerId;
+            remaining.splice(bestI, 1);
+          });
+
+          // Step 2: 빈 슬롯에 벤치 선수 순서대로 채우기
+          const placedIds = new Set(q.players.map((p) => p.playerId));
+          const benchPlayers = squad.filter((p) => !placedIds.has(p.id));
+          let benchIdx = 0;
+          slots.forEach((_, slotIdx) => {
+            if (slotToPlayerId[slotIdx] !== null) return;
+            if (benchIdx >= benchPlayers.length) return;
+            slotToPlayerId[slotIdx] = benchPlayers[benchIdx++].id;
+          });
+
+          // Step 3: 기존 선수 위치 갱신
+          const updatedExisting = q.players.map((p) => {
+            const slotIdx = slotToPlayerId.indexOf(p.playerId);
+            if (slotIdx === -1) return p; // 11명 초과 시 미배정 선수는 그대로
+            const slot = slots[slotIdx];
+            if (phase === 'attack') return { ...p, attackX: slot.x, attackY: slot.y };
+            if (phase === 'defense') return { ...p, defenseX: slot.x, defenseY: slot.y };
+            return { ...p, x: slot.x, y: slot.y };
+          });
+
+          // Step 4: 벤치에서 새로 들여온 선수 추가
+          const newFromBench = [];
+          slots.forEach((slot, slotIdx) => {
+            const pid = slotToPlayerId[slotIdx];
+            if (!pid) return;
+            if (placedIds.has(pid)) return; // 기존 선수는 이미 처리됨
+            const entry = { playerId: pid, x: slot.x, y: slot.y };
+            if (phase === 'attack') {
+              entry.attackX = slot.x;
+              entry.attackY = slot.y;
+            } else if (phase === 'defense') {
+              entry.defenseX = slot.x;
+              entry.defenseY = slot.y;
+            }
+            newFromBench.push(entry);
+          });
+
+          return {
+            ...q,
+            players: [...updatedExisting, ...newFromBench],
+            formations: {
+              ...(q.formations || {}),
+              [phase]: formationKey,
+            },
+          };
+        })
+      );
+    },
+    [activeIdx, phase, squad]
   );
 
   // 현재 쿼터에서만 해당 선수의 라벨 override (빈 값이면 라벨 제거 → 기본값으로 복귀)
@@ -206,6 +298,7 @@ export function useLineup(initialData) {
     removeFromPitch,
     dragPlayer,
     setPlayerLabel,
+    applyFormation,
     deleteFromSquad,
     addPlayer,
     addQuarter,
