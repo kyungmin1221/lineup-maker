@@ -26,7 +26,7 @@ export default function Header({
             marginBottom: 8,
           }}
         >
-          라인업 메이커
+          {readOnly ? '라인업 보기' : '라인업 편집'}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button

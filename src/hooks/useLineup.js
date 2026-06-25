@@ -9,7 +9,7 @@ import {
 
 export function useLineup(initialData) {
   const [teamName, setTeamName] = useState(
-    initialData?.teamName ?? '매탄동 FC'
+    initialData?.teamName ?? '이름없음 FC'
   );
   const [squad, setSquad] = useState(initialData?.squad ?? STARTER_SQUAD);
   const [quarters, setQuarters] = useState(
