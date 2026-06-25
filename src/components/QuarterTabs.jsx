@@ -8,7 +8,7 @@ function ConfirmDialog({ label, onConfirm, onCancel }) {
       onClick={onCancel}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.55)',
+        background: 'rgba(228, 14, 14, 0.55)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >

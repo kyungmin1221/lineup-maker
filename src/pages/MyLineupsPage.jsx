@@ -258,16 +258,16 @@ export default function MyLineupsPage() {
                           background: 'transparent',
                           border: 'none',
                           borderRadius: 8,
-                          color: C.muted,
+                          color: '#c43f3f',
                           cursor: 'pointer',
                           transition: 'color 0.15s, background 0.15s',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#ef4444';
-                          e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+                          e.currentTarget.style.color = '#c43f3f';
+                          e.currentTarget.style.background = 'rgba(7, 7, 7, 0.1)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = C.muted;
+                          e.currentTarget.style.color = '#c43f3f';
                           e.currentTarget.style.background = 'transparent';
                         }}
                       >
