@@ -103,3 +103,17 @@ export async function addComment(lineupId, quarterIdx, comment) {
     updatedAt: serverTimestamp(),
   });
 }
+
+export async function deleteComment(lineupId, quarterIdx, commentIdx) {
+  const snap = await getDoc(doc(db, "lineups", lineupId));
+  if (!snap.exists()) throw new Error("Lineup not found");
+  const data = snap.data();
+  const quarters = [...data.quarters];
+  const comments = [...(quarters[quarterIdx].comments || [])];
+  comments.splice(commentIdx, 1);
+  quarters[quarterIdx] = { ...quarters[quarterIdx], comments };
+  await updateDoc(doc(db, "lineups", lineupId), {
+    quarters,
+    updatedAt: serverTimestamp(),
+  });
+}

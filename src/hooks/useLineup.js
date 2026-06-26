@@ -272,6 +272,20 @@ export function useLineup(initialData) {
     [activeIdx]
   );
 
+  const deleteComment = useCallback(
+    (commentIdx) => {
+      setQuarters((qs) =>
+        qs.map((q, i) => {
+          if (i !== activeIdx) return q;
+          const comments = [...q.comments];
+          comments.splice(commentIdx, 1);
+          return { ...q, comments };
+        })
+      );
+    },
+    [activeIdx]
+  );
+
   // Firestore에서 받은 댓글을 로컬 상태에 반영 (선수 배치는 덮어쓰지 않음)
   const syncRemoteComments = useCallback((remoteQuarters) => {
     setQuarters((prev) =>
@@ -304,6 +318,7 @@ export function useLineup(initialData) {
     addQuarter,
     removeQuarter,
     addComment,
+    deleteComment,
     syncRemoteComments,
   };
 }

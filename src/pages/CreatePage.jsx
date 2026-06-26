@@ -13,6 +13,7 @@ import {
   getLineup,
   updateLineup,
   addComment as saveComment,
+  deleteComment as removeComment,
   subscribeToLineup,
 } from '../firebase/lineupService';
 import { ensureSignedIn } from '../firebase/auth';
@@ -120,7 +121,7 @@ function Editor({ id, initialData }) {
     addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,
-    addComment, syncRemoteComments,
+    addComment, deleteComment, syncRemoteComments,
   } = useLineup(initialData);
 
   // 친구 댓글을 실시간으로 동기화
@@ -172,6 +173,11 @@ function Editor({ id, initialData }) {
     trackEvent('add_comment', { role: 'owner' });
   };
 
+  const handleDeleteComment = async (commentIdx) => {
+    deleteComment(commentIdx);
+    await removeComment(id, activeIdx, commentIdx).catch(console.error);
+  };
+
   return (
     <div style={{ background: C.bg, minHeight: '100%', color: C.text }}>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
@@ -209,7 +215,12 @@ function Editor({ id, initialData }) {
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
 
-        <Comments quarter={quarter} onAddComment={handleAddComment} />
+        <Comments
+          quarter={quarter}
+          onAddComment={handleAddComment}
+          canDelete
+          onDeleteComment={handleDeleteComment}
+        />
       </div>
 
       <Toast message={toast} />

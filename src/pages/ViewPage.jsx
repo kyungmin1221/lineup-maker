@@ -6,7 +6,12 @@ import Pitch from '../components/Pitch';
 import Bench from '../components/Bench';
 import Comments from '../components/Comments';
 import Toast from '../components/Toast';
-import { subscribeToLineup, addComment as saveComment } from '../firebase/lineupService';
+import {
+  subscribeToLineup,
+  addComment as saveComment,
+  deleteComment as removeComment,
+} from '../firebase/lineupService';
+import { ensureSignedIn } from '../firebase/auth';
 import { useToast } from '../hooks/useToast';
 import { trackEvent } from '../lib/analytics';
 import { C } from '../constants';
@@ -17,8 +22,14 @@ export default function ViewPage() {
   const [loading, setLoading] = useState(true);
   const [activeIdx, setActiveIdx] = useState(0);
   const [phase, setPhase] = useState('base');
+  const [uid, setUid] = useState(null);
   const { toast, showToast } = useToast();
   const viewTracked = useRef(false);
+
+  // 현재 사용자 식별 — 본인 라인업이면 댓글 삭제 권한 부여
+  useEffect(() => {
+    ensureSignedIn().then(setUid).catch(() => {});
+  }, []);
 
   // Firestore 실시간 구독 — 라인업·댓글 모두 자동 반영
   useEffect(() => {
@@ -44,6 +55,15 @@ export default function ViewPage() {
     }
   };
 
+  const handleDeleteComment = async (commentIdx) => {
+    try {
+      await removeComment(id, activeIdx, commentIdx);
+      // onSnapshot이 자동 반영
+    } catch {
+      showToast('댓글 삭제에 실패했습니다.');
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -66,6 +86,7 @@ export default function ViewPage() {
   const quarter = lineup.quarters[activeIdx];
   const placedIds = new Set(quarter.players.map((p) => p.playerId));
   const bench = (lineup.squad || []).filter((p) => !placedIds.has(p.id));
+  const isOwner = !!uid && lineup.ownerId === uid;
   const displayPlayers = quarter.players.map((p) => {
     if (phase === 'attack') return { ...p, x: p.attackX ?? p.x, y: p.attackY ?? p.y };
     if (phase === 'defense') return { ...p, x: p.defenseX ?? p.x, y: p.defenseY ?? p.y };
@@ -113,7 +134,12 @@ export default function ViewPage() {
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
 
-        <Comments quarter={quarter} onAddComment={handleAddComment} />
+        <Comments
+          quarter={quarter}
+          onAddComment={handleAddComment}
+          canDelete={isOwner}
+          onDeleteComment={handleDeleteComment}
+        />
       </div>
 
       <Toast message={toast} />
