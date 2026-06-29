@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ensureSignedIn } from '../firebase/auth';
 import {
@@ -9,8 +9,10 @@ import {
 } from '../firebase/lineupService';
 import { makeQuarter, C } from '../constants';
 import { trackEvent } from '../lib/analytics';
+import Onboarding from '../components/Onboarding';
 
 const CACHE_KEY = 'lineup-maker:my-lineup-id';
+const ONBOARDED_KEY = 'lineup-maker:onboarded';
 
 function buildEmptyLineup() {
   return {
@@ -23,8 +25,13 @@ function buildEmptyLineup() {
 export default function EntryPage() {
   const navigate = useNavigate();
   const ran = useRef(false);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem(ONBOARDED_KEY) !== 'true'
+  );
 
   useEffect(() => {
+    // 온보딩 진행 중이면 라우팅 대기
+    if (showOnboarding) return;
     // StrictMode 이중 실행 방지
     if (ran.current) return;
     ran.current = true;
@@ -59,7 +66,17 @@ export default function EntryPage() {
         console.error(err);
       }
     })();
-  }, [navigate]);
+  }, [navigate, showOnboarding]);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem(ONBOARDED_KEY, 'true');
+    trackEvent('onboarding_complete');
+    setShowOnboarding(false);
+  };
+
+  if (showOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

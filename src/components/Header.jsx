@@ -1,6 +1,9 @@
-import { Share2, ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
+import { Share2, ArrowLeft, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { C } from '../constants';
+import Onboarding from './Onboarding';
+import { trackEvent } from '../lib/analytics';
 
 export default function Header({
   teamName,
@@ -11,23 +14,46 @@ export default function Header({
   readOnly,
 }) {
   const navigate = useNavigate();
+  const [showGuide, setShowGuide] = useState(false);
+
+  const openGuide = () => {
+    trackEvent('view_onboarding_again', { from: 'header' });
+    setShowGuide(true);
+  };
 
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '24px 24px 20px' }}>
+      {showGuide && <Onboarding onComplete={() => setShowGuide(false)} />}
       <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
-        <p
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            color: C.muted,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            marginTop: 0,
-            marginBottom: 8,
-          }}
-        >
-          {readOnly ? '라인업 보기' : '라인업 편집'}
-        </p>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          marginBottom: 8,
+        }}>
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 500,
+              color: C.muted,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              margin: 0,
+            }}
+          >
+            {readOnly ? '라인업 보기' : '라인업 편집'}
+          </p>
+          <button
+            onClick={openGuide}
+            aria-label="서비스 소개 보기"
+            title="서비스 소개 보기"
+            style={{
+              background: 'none', border: 'none',
+              color: C.muted, cursor: 'pointer',
+              padding: 2, display: 'flex', alignItems: 'center',
+            }}
+          >
+            <Info size={13} />
+          </button>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => navigate('/my')}

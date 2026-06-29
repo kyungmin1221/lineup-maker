@@ -11,6 +11,7 @@ import {
 } from '../firebase/lineupService';
 import { makeQuarter, C } from '../constants';
 import { trackEvent } from '../lib/analytics';
+import Onboarding from '../components/Onboarding';
 
 const CACHE_KEY = 'lineup-maker:my-lineup-id';
 
@@ -27,6 +28,12 @@ export default function MyLineupsPage() {
   const [myLineups, setMyLineups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+
+  const openGuide = () => {
+    trackEvent('view_onboarding_again', { from: 'my_footer' });
+    setShowGuide(true);
+  };
 
   useEffect(() => {
     (async () => {
@@ -281,19 +288,33 @@ export default function MyLineupsPage() {
           </div>
         )}
 
-        {/* Footer hint */}
-        <p
-          style={{
-            fontSize: 12,
-            color: C.muted,
-            textAlign: 'center',
-            marginTop: 56,
-            marginBottom: 0,
-          }}
-        >
-          Made By Kyungmin
-        </p>
+        {/* Footer */}
+        <div style={{ textAlign: 'center', marginTop: 56 }}>
+          <button
+            onClick={openGuide}
+            style={{
+              background: 'none', border: 'none',
+              color: C.sub, fontSize: 13, fontWeight: 500,
+              cursor: 'pointer', padding: '4px 8px',
+              textDecoration: 'underline', textUnderlineOffset: 3,
+            }}
+          >
+            서비스 소개
+          </button>
+          <p
+            style={{
+              fontSize: 12,
+              color: C.muted,
+              marginTop: 12,
+              marginBottom: 0,
+            }}
+          >
+            Made By Kyungmin
+          </p>
+        </div>
       </div>
+
+      {showGuide && <Onboarding onComplete={() => setShowGuide(false)} />}
     </div>
   );
 }
