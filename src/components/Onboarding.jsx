@@ -82,7 +82,7 @@ function AddAndFormationStatic() {
           대기 선수 <span style={{ color: C.blueBright }}>2</span>
         </p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-          {['손흥민', '이강인'].map((name) => (
+          {['호날두', '네이마르'].map((name) => (
             <div key={name} style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '4px 8px 4px 5px',
@@ -112,7 +112,7 @@ function AddAndFormationStatic() {
             fontSize: 12, color: C.text,
             display: 'flex', alignItems: 'center',
           }}>
-            박경민
+            메시
           </div>
           <div style={{
             width: 34, height: 34, flexShrink: 0,
