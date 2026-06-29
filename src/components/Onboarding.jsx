@@ -70,7 +70,7 @@ function AddAndFormationStatic() {
       </div>
 
       {/* 미니 경기장 — 4-3-3 11명 배치 */}
-      <MiniPitch formation="4-3-3" width={200} />
+      <MiniPitch formation="4-3-3" width={170} />
 
       {/* 대기 선수 영역 */}
       <div style={{ width: 220 }}>
@@ -217,14 +217,20 @@ export default function Onboarding({ onComplete }) {
         )}
       </div>
 
-      {/* Visual */}
+      {/* Visual — 콘텐츠가 클 경우 내부 스크롤, 작으면 가운데 정렬 유지 */}
       <div style={{
         flex: 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '12px 0',
         minHeight: 0,
+        overflowY: 'auto',
+        scrollbarWidth: 'none',
       }}>
-        {slide.visual}
+        <div style={{
+          minHeight: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '12px 0',
+        }}>
+          {slide.visual}
+        </div>
       </div>
 
       {/* Text */}
