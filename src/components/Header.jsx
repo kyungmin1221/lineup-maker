@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Share2, ArrowLeft, Info } from 'lucide-react';
+import { Share2, ArrowLeft, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { C } from '../constants';
 import Onboarding from './Onboarding';
@@ -43,15 +43,32 @@ export default function Header({
           </p>
           <button
             onClick={openGuide}
-            aria-label="서비스 소개 보기"
-            title="서비스 소개 보기"
+            aria-label="사용가이드 보기"
+            title="사용가이드 보기"
             style={{
-              background: 'none', border: 'none',
-              color: C.muted, cursor: 'pointer',
-              padding: 2, display: 'flex', alignItems: 'center',
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '3px 9px 3px 7px',
+              marginLeft: 4,
+              background: 'transparent',
+              border: `1px solid ${C.border}`,
+              borderRadius: 99,
+              color: C.sub,
+              fontSize: 10, fontWeight: 600,
+              letterSpacing: '0.02em',
+              cursor: 'pointer',
+              transition: 'border-color 0.15s, color 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = C.borderMid;
+              e.currentTarget.style.color = C.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = C.border;
+              e.currentTarget.style.color = C.sub;
             }}
           >
-            <Info size={13} />
+            <BookOpen size={11} />
+            서비스소개
           </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
