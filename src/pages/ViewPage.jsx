@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
 import Pitch from '../components/Pitch';
 import AnimBar from '../components/AnimBar';
+import ScenarioTabs from '../components/ScenarioTabs';
 import Bench from '../components/Bench';
 import Comments from '../components/Comments';
 import Toast from '../components/Toast';
@@ -23,6 +24,7 @@ export default function ViewPage() {
   const [loading, setLoading] = useState(true);
   const [activeIdx, setActiveIdx] = useState(0);
   const [phase, setPhase] = useState('base');
+  const [activeScenarioIdx, setActiveScenarioIdx] = useState(0);
   const [animStepIdx, setAnimStepIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [uid, setUid] = useState(null);
@@ -52,8 +54,11 @@ export default function ViewPage() {
     setPhase(newPhase);
     setIsPlaying(false);
     setAnimStepIdx(0);
+    setActiveScenarioIdx(0);
     if (newPhase === 'move') {
-      const steps = lineup?.quarters[activeIdx]?.animSteps || [];
+      const q = lineup?.quarters[activeIdx];
+      const scens = q?.scenarios ?? (q?.animSteps?.length > 0 ? [{ steps: q.animSteps }] : []);
+      const steps = scens[0]?.steps || [];
       if (steps.length >= 2) setTimeout(() => setIsPlaying(true), 300);
     }
   };
@@ -61,7 +66,9 @@ export default function ViewPage() {
   // 애니메이션 타이머
   useEffect(() => {
     if (!isPlaying || phase !== 'move') return;
-    const steps = lineup?.quarters[activeIdx]?.animSteps || [];
+    const q = lineup?.quarters[activeIdx];
+    const scens = q?.scenarios ?? (q?.animSteps?.length > 0 ? [{ steps: q.animSteps }] : []);
+    const steps = scens[Math.min(activeScenarioIdx, Math.max(0, scens.length - 1))]?.steps || [];
     if (steps.length < 2) { setIsPlaying(false); return; }
     const timer = setInterval(() => {
       setAnimStepIdx((prev) => {
@@ -71,7 +78,7 @@ export default function ViewPage() {
       });
     }, 1200);
     return () => clearInterval(timer);
-  }, [isPlaying, phase, lineup, activeIdx]);
+  }, [isPlaying, phase, lineup, activeIdx, activeScenarioIdx]);
 
   const handleAddComment = async (name, text) => {
     try {
@@ -116,7 +123,12 @@ export default function ViewPage() {
   const bench = (lineup.squad || []).filter((p) => !placedIds.has(p.id));
   const isOwner = !!uid && lineup.ownerId === uid;
 
-  const animSteps = quarter.animSteps || [];
+  // 구버전(animSteps) 호환 + 신버전(scenarios) 지원
+  const scenarios = quarter.scenarios
+    ?? (quarter.animSteps?.length > 0 ? [{ id: 'legacy', label: '움직임 1', steps: quarter.animSteps }] : []);
+  const clampedScenarioIdx = scenarios.length > 0 ? Math.min(activeScenarioIdx, scenarios.length - 1) : 0;
+  const activeScenario = scenarios[clampedScenarioIdx] ?? null;
+  const animSteps = activeScenario?.steps || [];
   const clampedAnimIdx = animSteps.length > 0 ? Math.min(animStepIdx, animSteps.length - 1) : 0;
   const currentStep = animSteps[clampedAnimIdx];
 
@@ -163,6 +175,15 @@ export default function ViewPage() {
           opponents={displayOpponents}
           ball={displayBall}
         />
+
+        {phase === 'move' && scenarios.length > 0 && (
+          <ScenarioTabs
+            scenarios={scenarios}
+            activeIdx={clampedScenarioIdx}
+            onSwitch={(idx) => { setActiveScenarioIdx(idx); setAnimStepIdx(0); setIsPlaying(false); }}
+            readOnly
+          />
+        )}
 
         {phase === 'move' && animSteps.length > 0 && (
           <AnimBar

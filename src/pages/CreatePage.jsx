@@ -5,6 +5,7 @@ import QuarterTabs from '../components/QuarterTabs';
 import FormationChips from '../components/FormationChips';
 import Pitch from '../components/Pitch';
 import AnimBar from '../components/AnimBar';
+import ScenarioTabs from '../components/ScenarioTabs';
 import Bench from '../components/Bench';
 import Comments from '../components/Comments';
 import Toast from '../components/Toast';
@@ -118,12 +119,14 @@ function Editor({ id, initialData }) {
     teamName, setTeamName,
     squad, quarters, activeIdx, setActiveIdx,
     phase, setPhase,
+    scenarios, activeScenarioIdx, switchScenario,
     animStepIdx, setAnimStepIdx, animSteps,
     quarter, bench, displayPlayers, displayOpponents, displayBall,
     addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,
     initAnimSteps, addAnimStep, removeAnimStep,
+    addScenario, removeScenario, renameScenario,
     dragOpponent, dragBall,
     addComment, deleteComment, syncRemoteComments,
   } = useLineup(initialData);
@@ -239,16 +242,26 @@ function Editor({ id, initialData }) {
         />
 
         {phase === 'move' && (
-          <AnimBar
-            steps={animSteps}
-            activeIdx={animStepIdx}
-            onSetIdx={setAnimStepIdx}
-            isPlaying={isPlaying}
-            onTogglePlay={() => setIsPlaying((p) => !p)}
-            onAddStep={addAnimStep}
-            onRemoveStep={removeAnimStep}
-            readOnly={false}
-          />
+          <>
+            <ScenarioTabs
+              scenarios={scenarios}
+              activeIdx={activeScenarioIdx}
+              onSwitch={(idx) => { switchScenario(idx); setIsPlaying(false); initAnimSteps(); }}
+              onAdd={() => { addScenario(); setIsPlaying(false); }}
+              onRemove={removeScenario}
+              onRename={renameScenario}
+            />
+            <AnimBar
+              steps={animSteps}
+              activeIdx={animStepIdx}
+              onSetIdx={setAnimStepIdx}
+              isPlaying={isPlaying}
+              onTogglePlay={() => setIsPlaying((p) => !p)}
+              onAddStep={addAnimStep}
+              onRemoveStep={removeAnimStep}
+              readOnly={false}
+            />
+          </>
         )}
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />

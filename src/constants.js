@@ -66,7 +66,7 @@ export const DEFAULT_OPPONENTS = STARTER_LAYOUT.map((p, i) => ({
 export const DEFAULT_BALL = { x: 50, y: 50 };
 
 export function makeQuarter(label, players = []) {
-  return { id: nextId(), label, players, comments: [], animSteps: [] };
+  return { id: nextId(), label, players, comments: [], scenarios: [] };
 }
 
 // 포메이션 프리셋 — 좌표는 % 단위 (0~100). 첫 슬롯은 항상 GK.

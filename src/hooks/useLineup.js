@@ -9,33 +9,40 @@ import {
   DEFAULT_BALL,
 } from '../constants';
 
+// 구버전 데이터(animSteps) → 새 구조(scenarios) 마이그레이션
+function migrateQuarter(q) {
+  if (q.scenarios !== undefined) return q;
+  const steps = q.animSteps || [];
+  return {
+    ...q,
+    scenarios: steps.length > 0
+      ? [{ id: nextId(), label: '움직임 1', steps }]
+      : [],
+  };
+}
+
 export function useLineup(initialData) {
-  const [teamName, setTeamName] = useState(
-    initialData?.teamName ?? '이름없음 FC'
-  );
+  const [teamName, setTeamName] = useState(initialData?.teamName ?? '이름없음 FC');
   const [squad, setSquad] = useState(initialData?.squad ?? STARTER_SQUAD);
   const [quarters, setQuarters] = useState(
-    initialData?.quarters ?? [
-      makeQuarter(
-        '1쿼터',
-        STARTER_LAYOUT.map((p) => ({ ...p }))
-      ),
-    ]
+    (initialData?.quarters ?? [makeQuarter('1쿼터', STARTER_LAYOUT.map((p) => ({ ...p })))])
+      .map(migrateQuarter)
   );
   const [activeIdx, setActiveIdx] = useState(0);
-  const [phase, setPhase] = useState('base'); // 'base' | 'attack' | 'defense' | 'move'
+  const [phase, setPhase] = useState('base');
+  const [activeScenarioIdx, setActiveScenarioIdx] = useState(0);
   const [animStepIdx, setAnimStepIdx] = useState(0);
 
   const quarter = quarters[activeIdx];
   const placedIds = new Set(quarter.players.map((p) => p.playerId));
   const bench = squad.filter((p) => !placedIds.has(p.id));
 
-  const animSteps = quarter.animSteps || [];
-  const clampedAnimIdx = animSteps.length > 0
-    ? Math.min(animStepIdx, animSteps.length - 1)
-    : 0;
+  const scenarios = quarter.scenarios || [];
+  const clampedScenarioIdx = scenarios.length > 0 ? Math.min(activeScenarioIdx, scenarios.length - 1) : 0;
+  const activeScenario = scenarios[clampedScenarioIdx] ?? null;
+  const animSteps = activeScenario?.steps || [];
+  const clampedAnimIdx = animSteps.length > 0 ? Math.min(animStepIdx, animSteps.length - 1) : 0;
 
-  // phase에 따라 표시할 좌표로 변환
   const baseFallback = quarter.players.map((p) => ({
     playerId: p.playerId,
     x: p.x,
@@ -51,44 +58,29 @@ export function useLineup(initialData) {
     return quarter.players;
   })();
 
-  const updatePlayers = useCallback(
-    (players) => {
-      setQuarters((qs) =>
-        qs.map((q, i) => (i === activeIdx ? { ...q, players } : q))
-      );
-    },
-    [activeIdx]
-  );
-
   const addToPitch = useCallback(
     (player) => {
       setQuarters((qs) => {
         const q = qs[activeIdx];
         if (q.players.some((p) => p.playerId === player.id)) return qs;
-        const taken = new Set(
-          q.players.map((p) => `${Math.round(p.x / 8)}-${Math.round(p.y / 8)}`)
-        );
+        const taken = new Set(q.players.map((p) => `${Math.round(p.x / 8)}-${Math.round(p.y / 8)}`));
         let x = 50, y = 50;
         for (let i = 0; i < 12; i++) {
           const tx = 20 + ((i * 17) % 60);
           const ty = 30 + ((i * 13) % 40);
-          if (!taken.has(`${Math.round(tx / 8)}-${Math.round(ty / 8)}`)) {
-            x = tx; y = ty; break;
-          }
+          if (!taken.has(`${Math.round(tx / 8)}-${Math.round(ty / 8)}`)) { x = tx; y = ty; break; }
         }
         const newEntry = { playerId: player.id, x, y };
-        return qs.map((q2, i) => {
-          if (i !== activeIdx) return q2;
-          // 움직임 모드일 때 모든 animStep에도 선수 추가
-          const updatedAnimSteps = (q2.animSteps || []).map((step) => ({
-            ...step,
-            players: [...step.players, { ...newEntry }],
-          }));
-          return {
-            ...q2,
-            players: [...q2.players, newEntry],
-            animSteps: updatedAnimSteps,
-          };
+        return qs.map((q2, i) => i !== activeIdx ? q2 : {
+          ...q2,
+          players: [...q2.players, newEntry],
+          scenarios: (q2.scenarios || []).map((sc) => ({
+            ...sc,
+            steps: sc.steps.map((step) => ({
+              ...step,
+              players: [...step.players, { ...newEntry }],
+            })),
+          })),
         });
       });
     },
@@ -98,16 +90,16 @@ export function useLineup(initialData) {
   const removeFromPitch = useCallback(
     (playerId) => {
       setQuarters((qs) =>
-        qs.map((q, i) => {
-          if (i !== activeIdx) return q;
-          return {
-            ...q,
-            players: q.players.filter((p) => p.playerId !== playerId),
-            animSteps: (q.animSteps || []).map((step) => ({
+        qs.map((q, i) => i !== activeIdx ? q : {
+          ...q,
+          players: q.players.filter((p) => p.playerId !== playerId),
+          scenarios: (q.scenarios || []).map((sc) => ({
+            ...sc,
+            steps: sc.steps.map((step) => ({
               ...step,
               players: step.players.filter((p) => p.playerId !== playerId),
             })),
-          };
+          })),
         })
       );
     },
@@ -118,13 +110,11 @@ export function useLineup(initialData) {
     (formationKey) => {
       const slots = FORMATIONS[formationKey];
       if (!slots) return;
-
       setQuarters((qs) =>
         qs.map((q, i) => {
           if (i !== activeIdx) return q;
-
           const slotToPlayerId = new Array(slots.length).fill(null);
-          const remaining = q.players.map((p) => p);
+          const remaining = [...q.players];
           slots.forEach((slot, slotIdx) => {
             if (remaining.length === 0) return;
             let bestI = 0, bestDist = Infinity;
@@ -135,7 +125,6 @@ export function useLineup(initialData) {
             slotToPlayerId[slotIdx] = remaining[bestI].playerId;
             remaining.splice(bestI, 1);
           });
-
           const placedIds2 = new Set(q.players.map((p) => p.playerId));
           const benchPlayers = squad.filter((p) => !placedIds2.has(p.id));
           let benchIdx = 0;
@@ -144,23 +133,18 @@ export function useLineup(initialData) {
             if (benchIdx >= benchPlayers.length) return;
             slotToPlayerId[slotIdx] = benchPlayers[benchIdx++].id;
           });
-
           const updatedExisting = q.players.map((p) => {
             const slotIdx = slotToPlayerId.indexOf(p.playerId);
-            if (slotIdx === -1) return p;
-            return { ...p, x: slots[slotIdx].x, y: slots[slotIdx].y };
+            return slotIdx === -1 ? p : { ...p, x: slots[slotIdx].x, y: slots[slotIdx].y };
           });
-
           const newFromBench = [];
           slots.forEach((slot, slotIdx) => {
             const pid = slotToPlayerId[slotIdx];
             if (!pid || placedIds2.has(pid)) return;
             newFromBench.push({ playerId: pid, x: slot.x, y: slot.y });
           });
-
           const newPlayers = [...updatedExisting, ...newFromBench];
-
-          const updatedAnimSteps = (q.animSteps || []).map((step) => {
+          const syncSteps = (steps) => steps.map((step) => {
             const stepPlayerIds = new Set(step.players.map((p) => p.playerId));
             const movedPlayers = step.players.map((sp) => {
               const matched = newPlayers.find((np) => np.playerId === sp.playerId);
@@ -171,12 +155,11 @@ export function useLineup(initialData) {
               .map((p) => ({ playerId: p.playerId, x: p.x, y: p.y }));
             return { ...step, players: [...movedPlayers, ...newlyAdded] };
           });
-
           return {
             ...q,
             players: newPlayers,
             formations: { ...(q.formations || {}), base: formationKey },
-            animSteps: updatedAnimSteps,
+            scenarios: (q.scenarios || []).map((sc) => ({ ...sc, steps: syncSteps(sc.steps) })),
           };
         })
       );
@@ -198,9 +181,12 @@ export function useLineup(initialData) {
           return {
             ...q,
             players: q.players.map(applyLabel),
-            animSteps: (q.animSteps || []).map((step) => ({
-              ...step,
-              players: step.players.map(applyLabel),
+            scenarios: (q.scenarios || []).map((sc) => ({
+              ...sc,
+              steps: sc.steps.map((step) => ({
+                ...step,
+                players: step.players.map(applyLabel),
+              })),
             })),
           };
         })
@@ -214,41 +200,41 @@ export function useLineup(initialData) {
       if (phase === 'move') {
         setQuarters((qs) => {
           const q = qs[activeIdx];
-          const steps = q.animSteps || [];
-          const si = Math.min(animStepIdx, steps.length - 1);
+          const scens = q.scenarios || [];
+          const si = Math.min(activeScenarioIdx, scens.length - 1);
           if (si < 0) return qs;
+          const steps = scens[si]?.steps || [];
+          const stepSi = Math.min(animStepIdx, steps.length - 1);
+          if (stepSi < 0) return qs;
           return qs.map((q2, i) => i !== activeIdx ? q2 : {
             ...q2,
-            animSteps: steps.map((s, idx) => idx !== si ? s : {
-              ...s,
-              players: s.players.map((p) =>
-                p.playerId === playerId ? { ...p, x, y } : p
-              ),
+            scenarios: scens.map((sc, sci) => sci !== si ? sc : {
+              ...sc,
+              steps: steps.map((s, idx) => idx !== stepSi ? s : {
+                ...s,
+                players: s.players.map((p) => p.playerId === playerId ? { ...p, x, y } : p),
+              }),
             }),
           });
         });
         return;
       }
+      // base phase: 모든 시나리오의 모든 스텝 동기화
       setQuarters((qs) =>
-        qs.map((q, i) =>
-          i === activeIdx
-            ? {
-                ...q,
-                players: q.players.map((p) =>
-                  p.playerId !== playerId ? p : { ...p, x, y }
-                ),
-                animSteps: (q.animSteps || []).map((step) => ({
-                  ...step,
-                  players: step.players.map((p) =>
-                    p.playerId === playerId ? { ...p, x, y } : p
-                  ),
-                })),
-              }
-            : q
-        )
+        qs.map((q, i) => i !== activeIdx ? q : {
+          ...q,
+          players: q.players.map((p) => p.playerId !== playerId ? p : { ...p, x, y }),
+          scenarios: (q.scenarios || []).map((sc) => ({
+            ...sc,
+            steps: sc.steps.map((step) => ({
+              ...step,
+              players: step.players.map((p) => p.playerId === playerId ? { ...p, x, y } : p),
+            })),
+          })),
+        })
       );
     },
-    [activeIdx, phase, animStepIdx]
+    [activeIdx, phase, activeScenarioIdx, animStepIdx]
   );
 
   const deleteFromSquad = useCallback((playerId) => {
@@ -257,6 +243,13 @@ export function useLineup(initialData) {
       qs.map((q) => ({
         ...q,
         players: q.players.filter((p) => p.playerId !== playerId),
+        scenarios: (q.scenarios || []).map((sc) => ({
+          ...sc,
+          steps: sc.steps.map((step) => ({
+            ...step,
+            players: step.players.filter((p) => p.playerId !== playerId),
+          })),
+        })),
       }))
     );
   }, []);
@@ -285,136 +278,212 @@ export function useLineup(initialData) {
     setActiveIdx((cur) => (idx <= cur ? Math.max(0, cur - 1) : cur));
   }, []);
 
-  // 움직임 phase 진입 시 첫 스텝 자동 생성 (아직 없는 경우)
+  // 움직임 탭 진입 시 활성 시나리오 초기화 / 스텝 1 기본 포메이션 동기화
   const initAnimSteps = useCallback(() => {
     setQuarters((qs) =>
       qs.map((q, i) => {
         if (i !== activeIdx) return q;
-        if (q.animSteps && q.animSteps.length > 0) {
-          const [firstStep, ...restSteps] = q.animSteps;
-          // label 동기화 헬퍼: base players의 label을 animStep player에 반영
-          const syncLabel = (sp) => {
-            const base = q.players.find((bp) => bp.playerId === sp.playerId);
-            if (!base) return sp;
-            if (base.label) return { ...sp, label: base.label };
-            const { label: _omit, ...rest } = sp;
-            return rest;
+        const scens = q.scenarios || [];
+
+        if (scens.length === 0) {
+          const firstStep = {
+            id: nextId(),
+            players: q.players.map((p) => ({
+              playerId: p.playerId, x: p.x, y: p.y,
+              ...(p.label ? { label: p.label } : {}),
+            })),
+            opponents: DEFAULT_OPPONENTS.map((o) => ({ ...o })),
+            ball: { ...DEFAULT_BALL },
           };
-          // 스텝 1: 기본 포메이션 위치(x,y) + label 동기화
-          const syncedFirst = {
-            ...firstStep,
-            players: firstStep.players.map((sp) => {
-              const base = q.players.find((bp) => bp.playerId === sp.playerId);
-              if (!base) return sp;
-              const synced = { ...sp, x: base.x, y: base.y };
-              if (base.label) synced.label = base.label;
-              else delete synced.label;
-              return synced;
-            }),
-            opponents: firstStep.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
-            ball: firstStep.ball || { ...DEFAULT_BALL },
-          };
-          // 스텝 2+: label만 동기화 (x,y 커스텀 유지)
-          const migratedRest = restSteps.map((step) => ({
-            ...step,
-            players: step.players.map(syncLabel),
-            opponents: step.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
-            ball: step.ball || { ...DEFAULT_BALL },
-          }));
-          return { ...q, animSteps: [syncedFirst, ...migratedRest] };
+          return { ...q, scenarios: [{ id: nextId(), label: '움직임 1', steps: [firstStep] }] };
         }
+
+        const si = Math.min(activeScenarioIdx, scens.length - 1);
+        const syncLabel = (sp) => {
+          const base = q.players.find((bp) => bp.playerId === sp.playerId);
+          if (!base) return sp;
+          if (base.label) return { ...sp, label: base.label };
+          const { label: _omit, ...rest } = sp;
+          return rest;
+        };
+
+        return {
+          ...q,
+          scenarios: scens.map((sc, sci) => {
+            if (sci !== si) return sc;
+            const [firstStep, ...restSteps] = sc.steps;
+            if (!firstStep) return sc;
+            const syncedFirst = {
+              ...firstStep,
+              players: firstStep.players.map((sp) => {
+                const base = q.players.find((bp) => bp.playerId === sp.playerId);
+                if (!base) return sp;
+                const synced = { ...sp, x: base.x, y: base.y };
+                if (base.label) synced.label = base.label;
+                else delete synced.label;
+                return synced;
+              }),
+              opponents: firstStep.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
+              ball: firstStep.ball || { ...DEFAULT_BALL },
+            };
+            const migratedRest = restSteps.map((step) => ({
+              ...step,
+              players: step.players.map(syncLabel),
+              opponents: step.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
+              ball: step.ball || { ...DEFAULT_BALL },
+            }));
+            return { ...sc, steps: [syncedFirst, ...migratedRest] };
+          }),
+        };
+      })
+    );
+    setAnimStepIdx(0);
+  }, [activeIdx, activeScenarioIdx]);
+
+  const addAnimStep = useCallback(() => {
+    const currentLen = animSteps.length;
+    setQuarters((qs) => {
+      const q = qs[activeIdx];
+      const scens = q.scenarios || [];
+      const si = Math.min(activeScenarioIdx, scens.length - 1);
+      if (si < 0) return qs;
+      const steps = scens[si]?.steps || [];
+      const lastStep = steps[steps.length - 1];
+      const newStep = {
+        id: nextId(),
+        players: (lastStep ? lastStep.players : q.players.map((p) => ({
+          playerId: p.playerId, x: p.x, y: p.y,
+          ...(p.label ? { label: p.label } : {}),
+        }))).map((p) => ({ ...p })),
+        opponents: (lastStep?.opponents || DEFAULT_OPPONENTS).map((o) => ({ ...o })),
+        ball: lastStep?.ball ? { ...lastStep.ball } : { ...DEFAULT_BALL },
+      };
+      return qs.map((q2, i) => i !== activeIdx ? q2 : {
+        ...q2,
+        scenarios: scens.map((sc, sci) =>
+          sci !== si ? sc : { ...sc, steps: [...steps, newStep] }
+        ),
+      });
+    });
+    setAnimStepIdx(currentLen);
+  }, [activeIdx, activeScenarioIdx, animSteps.length]);
+
+  const removeAnimStep = useCallback((idx) => {
+    setQuarters((qs) => {
+      const q = qs[activeIdx];
+      const scens = q.scenarios || [];
+      const si = Math.min(activeScenarioIdx, scens.length - 1);
+      if (si < 0) return qs;
+      const steps = scens[si]?.steps || [];
+      if (steps.length <= 1) return qs;
+      return qs.map((q2, i) => i !== activeIdx ? q2 : {
+        ...q2,
+        scenarios: scens.map((sc, sci) =>
+          sci !== si ? sc : { ...sc, steps: steps.filter((_, si2) => si2 !== idx) }
+        ),
+      });
+    });
+    setAnimStepIdx((prev) => Math.max(0, idx <= prev ? prev - 1 : prev));
+  }, [activeIdx, activeScenarioIdx]);
+
+  const dragOpponent = useCallback((oppId, x, y) => {
+    setQuarters((qs) => {
+      const q = qs[activeIdx];
+      const scens = q.scenarios || [];
+      const si = Math.min(activeScenarioIdx, scens.length - 1);
+      if (si < 0) return qs;
+      const steps = scens[si]?.steps || [];
+      const stepSi = Math.min(animStepIdx, steps.length - 1);
+      if (stepSi < 0) return qs;
+      return qs.map((q2, i) => i !== activeIdx ? q2 : {
+        ...q2,
+        scenarios: scens.map((sc, sci) => sci !== si ? sc : {
+          ...sc,
+          steps: steps.map((s, idx) => idx !== stepSi ? s : {
+            ...s,
+            opponents: (s.opponents || DEFAULT_OPPONENTS).map((o) =>
+              o.id === oppId ? { ...o, x, y } : o
+            ),
+          }),
+        }),
+      });
+    });
+  }, [activeIdx, activeScenarioIdx, animStepIdx]);
+
+  const dragBall = useCallback((x, y) => {
+    setQuarters((qs) => {
+      const q = qs[activeIdx];
+      const scens = q.scenarios || [];
+      const si = Math.min(activeScenarioIdx, scens.length - 1);
+      if (si < 0) return qs;
+      const steps = scens[si]?.steps || [];
+      const stepSi = Math.min(animStepIdx, steps.length - 1);
+      if (stepSi < 0) return qs;
+      return qs.map((q2, i) => i !== activeIdx ? q2 : {
+        ...q2,
+        scenarios: scens.map((sc, sci) => sci !== si ? sc : {
+          ...sc,
+          steps: steps.map((s, idx) => idx !== stepSi ? s : { ...s, ball: { x, y } }),
+        }),
+      });
+    });
+  }, [activeIdx, activeScenarioIdx, animStepIdx]);
+
+  const addScenario = useCallback(() => {
+    const newIdx = scenarios.length;
+    setQuarters((qs) =>
+      qs.map((q, i) => {
+        if (i !== activeIdx) return q;
         const firstStep = {
           id: nextId(),
           players: q.players.map((p) => ({
-            playerId: p.playerId,
-            x: p.x,
-            y: p.y,
+            playerId: p.playerId, x: p.x, y: p.y,
             ...(p.label ? { label: p.label } : {}),
           })),
           opponents: DEFAULT_OPPONENTS.map((o) => ({ ...o })),
           ball: { ...DEFAULT_BALL },
         };
-        return { ...q, animSteps: [firstStep] };
+        return {
+          ...q,
+          scenarios: [...(q.scenarios || []), {
+            id: nextId(),
+            label: `움직임 ${(q.scenarios || []).length + 1}`,
+            steps: [firstStep],
+          }],
+        };
       })
     );
+    setActiveScenarioIdx(newIdx);
+    setAnimStepIdx(0);
+  }, [activeIdx, scenarios.length]);
+
+  const removeScenario = useCallback((idx) => {
+    setQuarters((qs) =>
+      qs.map((q, i) => {
+        if (i !== activeIdx) return q;
+        if ((q.scenarios || []).length <= 1) return q;
+        return { ...q, scenarios: q.scenarios.filter((_, si) => si !== idx) };
+      })
+    );
+    setActiveScenarioIdx((cur) => (idx <= cur ? Math.max(0, cur - 1) : cur));
     setAnimStepIdx(0);
   }, [activeIdx]);
 
-  const addAnimStep = useCallback(() => {
-    const currentLen = (quarter.animSteps || []).length;
-    setQuarters((qs) => {
-      const q = qs[activeIdx];
-      const steps = q.animSteps || [];
-      const lastStep = steps[steps.length - 1];
-      const basePlayers = lastStep
-        ? lastStep.players.map((p) => ({ ...p }))
-        : q.players.map((p) => ({
-            playerId: p.playerId,
-            x: p.x,
-            y: p.y,
-            ...(p.label ? { label: p.label } : {}),
-          }));
-      const newStep = {
-        id: nextId(),
-        players: basePlayers,
-        opponents: (lastStep?.opponents || DEFAULT_OPPONENTS).map((o) => ({ ...o })),
-        ball: lastStep?.ball ? { ...lastStep.ball } : { ...DEFAULT_BALL },
-      };
-      return qs.map((q2, i) =>
-        i !== activeIdx ? q2 : { ...q2, animSteps: [...steps, newStep] }
-      );
-    });
-    setAnimStepIdx(currentLen);
-  }, [activeIdx, quarter.animSteps]);
-
-  const dragOpponent = useCallback((oppId, x, y) => {
-    setQuarters((qs) => {
-      const q = qs[activeIdx];
-      const steps = q.animSteps || [];
-      const si = Math.min(animStepIdx, steps.length - 1);
-      if (si < 0) return qs;
-      return qs.map((q2, i) => i !== activeIdx ? q2 : {
-        ...q2,
-        animSteps: steps.map((s, idx) => idx !== si ? s : {
-          ...s,
-          opponents: (s.opponents || DEFAULT_OPPONENTS).map((o) =>
-            o.id === oppId ? { ...o, x, y } : o
-          ),
-        }),
-      });
-    });
-  }, [activeIdx, animStepIdx]);
-
-  const dragBall = useCallback((x, y) => {
-    setQuarters((qs) => {
-      const q = qs[activeIdx];
-      const steps = q.animSteps || [];
-      const si = Math.min(animStepIdx, steps.length - 1);
-      if (si < 0) return qs;
-      return qs.map((q2, i) => i !== activeIdx ? q2 : {
-        ...q2,
-        animSteps: steps.map((s, idx) => idx !== si ? s : {
-          ...s,
-          ball: { x, y },
-        }),
-      });
-    });
-  }, [activeIdx, animStepIdx]);
-
-  const removeAnimStep = useCallback((idx) => {
-    setQuarters((qs) => {
-      const q = qs[activeIdx];
-      const steps = q.animSteps || [];
-      if (steps.length <= 1) return qs;
-      return qs.map((q2, i) =>
-        i !== activeIdx ? q2 : {
-          ...q2,
-          animSteps: steps.filter((_, si) => si !== idx),
-        }
-      );
-    });
-    setAnimStepIdx((prev) => Math.max(0, idx <= prev ? prev - 1 : prev));
+  const renameScenario = useCallback((idx, label) => {
+    setQuarters((qs) =>
+      qs.map((q, i) => i !== activeIdx ? q : {
+        ...q,
+        scenarios: (q.scenarios || []).map((sc, si) =>
+          si !== idx ? sc : { ...sc, label }
+        ),
+      })
+    );
   }, [activeIdx]);
+
+  const switchScenario = useCallback((idx) => {
+    setActiveScenarioIdx(idx);
+    setAnimStepIdx(0);
+  }, []);
 
   const addComment = useCallback(
     (name, text) => {
@@ -460,14 +529,15 @@ export function useLineup(initialData) {
     teamName, setTeamName,
     squad, quarters, activeIdx, setActiveIdx,
     phase, setPhase,
-    animStepIdx: clampedAnimIdx,
-    setAnimStepIdx,
+    scenarios, activeScenarioIdx, switchScenario,
+    animStepIdx: clampedAnimIdx, setAnimStepIdx,
     animSteps,
     quarter, bench, displayPlayers, displayOpponents, displayBall,
     addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,
     initAnimSteps, addAnimStep, removeAnimStep,
+    addScenario, removeScenario, renameScenario, switchScenario,
     dragOpponent, dragBall,
     addComment, deleteComment, syncRemoteComments,
   };
