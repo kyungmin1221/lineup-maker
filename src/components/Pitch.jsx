@@ -42,7 +42,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
     const up = () => {
       const id = dragging.current;
       // 선수 토큰만 탭으로 라벨 편집 (상대팀·공은 제외)
-      if (id && !didMove.current && !readOnly && onLabelChange) {
+      if (id && !didMove.current && !readOnly && onLabelChange && phase !== 'move') {
         if (id !== 'ball' && !id.startsWith('opp:')) {
           setEditingPlayerId(id);
         }
@@ -311,7 +311,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
                   {p.label || info.number}
                 </div>
 
-                {!readOnly && (
+                {!readOnly && phase !== 'move' && (
                   <button
                     onPointerDown={e => e.stopPropagation()}
                     onClick={e => { e.stopPropagation(); onRemove(p.playerId); }}
