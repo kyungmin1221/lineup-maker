@@ -96,7 +96,7 @@ export default function Header({
               onChange={(e) => setTeamName(e.target.value)}
               onBlur={() => setEditingTeam(false)}
               onKeyDown={(e) => e.key === 'Enter' && setEditingTeam(false)}
-              placeholder="팀명을 입력하세요"
+              placeholder="팀명을 입력하세요."
               style={{
                 background: 'transparent',
                 border: 'none',
