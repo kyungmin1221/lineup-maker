@@ -1,3 +1,11 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "functions": {
+    "api/lineup-og.js": {
+      "includeFiles": "dist/index.html"
+    }
+  },
+  "rewrites": [
+    { "source": "/view/:id", "destination": "/api/lineup-og?id=:id" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
