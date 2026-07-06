@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
 import FormationChips from '../components/FormationChips';
 import Pitch from '../components/Pitch';
+import AnimBar from '../components/AnimBar';
 import Bench from '../components/Bench';
 import Comments from '../components/Comments';
 import Toast from '../components/Toast';
@@ -117,12 +118,37 @@ function Editor({ id, initialData }) {
     teamName, setTeamName,
     squad, quarters, activeIdx, setActiveIdx,
     phase, setPhase,
-    quarter, bench, displayPlayers,
+    animStepIdx, setAnimStepIdx, animSteps,
+    quarter, bench, displayPlayers, displayOpponents, displayBall,
     addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,
+    initAnimSteps, addAnimStep, removeAnimStep,
+    dragOpponent, dragBall,
     addComment, deleteComment, syncRemoteComments,
   } = useLineup(initialData);
+
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const handleSetPhase = useCallback((newPhase) => {
+    if (newPhase === 'move') initAnimSteps();
+    setIsPlaying(false);
+    setPhase(newPhase);
+  }, [initAnimSteps, setPhase]);
+
+  // 애니메이션 타이머
+  useEffect(() => {
+    if (!isPlaying || phase !== 'move') return;
+    if (animSteps.length < 2) { setIsPlaying(false); return; }
+    const timer = setInterval(() => {
+      setAnimStepIdx((prev) => {
+        const next = prev + 1;
+        if (next >= animSteps.length) { setIsPlaying(false); return 0; }
+        return next;
+      });
+    }, 1200);
+    return () => clearInterval(timer);
+  }, [isPlaying, phase, animSteps.length, setAnimStepIdx]);
 
   // 친구 댓글을 실시간으로 동기화
   useEffect(() => {
@@ -202,9 +228,26 @@ function Editor({ id, initialData }) {
           onDrag={dragPlayer} onRemove={removeFromPitch}
           onLabelChange={setPlayerLabel}
           readOnly={false}
-          phase={phase} setPhase={setPhase}
+          phase={phase} setPhase={handleSetPhase}
           formation={quarter.formations?.[phase]}
+          opponents={displayOpponents}
+          ball={displayBall}
+          onDragOpponent={dragOpponent}
+          onDragBall={dragBall}
         />
+
+        {phase === 'move' && (
+          <AnimBar
+            steps={animSteps}
+            activeIdx={animStepIdx}
+            onSetIdx={setAnimStepIdx}
+            isPlaying={isPlaying}
+            onTogglePlay={() => setIsPlaying((p) => !p)}
+            onAddStep={addAnimStep}
+            onRemoveStep={removeAnimStep}
+            readOnly={false}
+          />
+        )}
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
 

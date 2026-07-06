@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
 import Pitch from '../components/Pitch';
+import AnimBar from '../components/AnimBar';
 import Bench from '../components/Bench';
 import Comments from '../components/Comments';
 import Toast from '../components/Toast';
@@ -22,6 +23,8 @@ export default function ViewPage() {
   const [loading, setLoading] = useState(true);
   const [activeIdx, setActiveIdx] = useState(0);
   const [phase, setPhase] = useState('base');
+  const [animStepIdx, setAnimStepIdx] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [uid, setUid] = useState(null);
   const { toast, showToast } = useToast();
   const viewTracked = useRef(false);
@@ -44,6 +47,31 @@ export default function ViewPage() {
     });
     return unsub;
   }, [id]);
+
+  const handleSetPhase = (newPhase) => {
+    setPhase(newPhase);
+    setIsPlaying(false);
+    setAnimStepIdx(0);
+    if (newPhase === 'move') {
+      const steps = lineup?.quarters[activeIdx]?.animSteps || [];
+      if (steps.length >= 2) setTimeout(() => setIsPlaying(true), 300);
+    }
+  };
+
+  // 애니메이션 타이머
+  useEffect(() => {
+    if (!isPlaying || phase !== 'move') return;
+    const steps = lineup?.quarters[activeIdx]?.animSteps || [];
+    if (steps.length < 2) { setIsPlaying(false); return; }
+    const timer = setInterval(() => {
+      setAnimStepIdx((prev) => {
+        const next = prev + 1;
+        if (next >= steps.length) { setIsPlaying(false); return 0; }
+        return next;
+      });
+    }, 1200);
+    return () => clearInterval(timer);
+  }, [isPlaying, phase, lineup, activeIdx]);
 
   const handleAddComment = async (name, text) => {
     try {
@@ -87,11 +115,24 @@ export default function ViewPage() {
   const placedIds = new Set(quarter.players.map((p) => p.playerId));
   const bench = (lineup.squad || []).filter((p) => !placedIds.has(p.id));
   const isOwner = !!uid && lineup.ownerId === uid;
-  const displayPlayers = quarter.players.map((p) => {
-    if (phase === 'attack') return { ...p, x: p.attackX ?? p.x, y: p.attackY ?? p.y };
-    if (phase === 'defense') return { ...p, x: p.defenseX ?? p.x, y: p.defenseY ?? p.y };
-    return p;
-  });
+
+  const animSteps = quarter.animSteps || [];
+  const clampedAnimIdx = animSteps.length > 0 ? Math.min(animStepIdx, animSteps.length - 1) : 0;
+  const currentStep = animSteps[clampedAnimIdx];
+
+  const displayPlayers = (() => {
+    if (phase === 'move') {
+      return currentStep?.players ?? quarter.players.map(p => ({ playerId: p.playerId, x: p.x, y: p.y }));
+    }
+    return quarter.players.map((p) => {
+      if (phase === 'attack') return { ...p, x: p.attackX ?? p.x, y: p.attackY ?? p.y };
+      if (phase === 'defense') return { ...p, x: p.defenseX ?? p.x, y: p.defenseY ?? p.y };
+      return p;
+    });
+  })();
+
+  const displayOpponents = phase === 'move' ? (currentStep?.opponents || []) : [];
+  const displayBall = phase === 'move' ? (currentStep?.ball || null) : null;
 
   return (
     <div style={{ background: C.bg, minHeight: '100%', color: C.text }}>
@@ -124,9 +165,24 @@ export default function ViewPage() {
           onRemove={() => {}}
           readOnly
           phase={phase}
-          setPhase={setPhase}
+          setPhase={handleSetPhase}
           formation={quarter.formations?.[phase]}
+          opponents={displayOpponents}
+          ball={displayBall}
         />
+
+        {phase === 'move' && animSteps.length > 0 && (
+          <AnimBar
+            steps={animSteps}
+            activeIdx={clampedAnimIdx}
+            onSetIdx={(i) => { setAnimStepIdx(i); setIsPlaying(false); }}
+            isPlaying={isPlaying}
+            onTogglePlay={() => setIsPlaying((p) => !p)}
+            onAddStep={() => {}}
+            onRemoveStep={() => {}}
+            readOnly
+          />
+        )}
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
 

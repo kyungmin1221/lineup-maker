@@ -55,8 +55,18 @@ export const STARTER_LAYOUT = [
   { playerId: '11', x: 75, y: 30 },
 ];
 
+// 움직임 모드 전용 — 상대팀 기본 위치 (우리팀 STARTER_LAYOUT의 y 미러)
+export const DEFAULT_OPPONENTS = STARTER_LAYOUT.map((p, i) => ({
+  id: `opp-${i}`,
+  x: p.x,
+  y: Math.round(100 - p.y),
+}));
+
+// 공 기본 위치 (센터서클)
+export const DEFAULT_BALL = { x: 50, y: 50 };
+
 export function makeQuarter(label, players = []) {
-  return { id: nextId(), label, players, comments: [] };
+  return { id: nextId(), label, players, comments: [], animSteps: [] };
 }
 
 // 포메이션 프리셋 — 좌표는 % 단위 (0~100). 첫 슬롯은 항상 GK.

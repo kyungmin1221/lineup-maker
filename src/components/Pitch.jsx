@@ -3,7 +3,7 @@ import { C, FORMATIONS } from '../constants';
 
 const TAP_MOVE_THRESHOLD = 5; // 픽셀: 이만큼 안 움직였으면 탭으로 간주
 
-export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase, formation }) {
+export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase, formation, opponents, ball, onDragOpponent, onDragBall }) {
   const pitchRef = useRef(null);
   const dragging = useRef(null);
   const downPos = useRef(null);     // pointerdown 시점 좌표
@@ -16,7 +16,6 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
       if (!dragging.current) return;
       const pt = e.touches ? e.touches[0] : e;
 
-      // 움직임 임계값 검사 — 탭/드래그 구분
       if (!didMove.current && downPos.current) {
         const dx = Math.abs(pt.clientX - downPos.current.x);
         const dy = Math.abs(pt.clientY - downPos.current.y);
@@ -25,19 +24,28 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
         }
       }
 
-      // 실제로 움직였을 때만 드래그 처리 + preventDefault
       if (didMove.current) {
         e.preventDefault();
         const rect = pitchRef.current.getBoundingClientRect();
         const x = Math.max(5, Math.min(95, ((pt.clientX - rect.left) / rect.width) * 100));
         const y = Math.max(5, Math.min(95, ((pt.clientY - rect.top) / rect.height) * 100));
-        onDrag(dragging.current, x, y);
+        const id = dragging.current;
+        if (id === 'ball') {
+          onDragBall?.(x, y);
+        } else if (typeof id === 'string' && id.startsWith('opp:')) {
+          onDragOpponent?.(id.slice(4), x, y);
+        } else {
+          onDrag(id, x, y);
+        }
       }
     };
     const up = () => {
-      // 탭으로 끝났다면 라벨 편집 모달 열기
-      if (dragging.current && !didMove.current && !readOnly && onLabelChange) {
-        setEditingPlayerId(dragging.current);
+      const id = dragging.current;
+      // 선수 토큰만 탭으로 라벨 편집 (상대팀·공은 제외)
+      if (id && !didMove.current && !readOnly && onLabelChange) {
+        if (id !== 'ball' && !id.startsWith('opp:')) {
+          setEditingPlayerId(id);
+        }
       }
       dragging.current = null;
       downPos.current = null;
@@ -54,7 +62,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
     };
-  }, [onDrag, onLabelChange, readOnly]);
+  }, [onDrag, onDragOpponent, onDragBall, onLabelChange, readOnly]);
 
   const byId = id => squad.find(p => p.id === id);
   const L = C.pitchLine;
@@ -91,6 +99,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
               { key: 'base', label: '기본' },
               { key: 'attack', label: '공격' },
               { key: 'defense', label: '수비' },
+              { key: 'move', label: '움직임' },
             ].map(({ key, label }) => {
               const active = phase === key;
               return (
@@ -202,6 +211,67 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
           </div>
         )}
 
+        {/* 상대팀 마커 — 움직임 모드에서만 표시 */}
+        {phase === 'move' && (opponents || []).map((opp) => (
+          <div
+            key={opp.id}
+            onPointerDown={readOnly ? undefined : e => {
+              e.preventDefault();
+              dragging.current = `opp:${opp.id}`;
+              downPos.current = { x: e.clientX, y: e.clientY };
+              didMove.current = false;
+              setDraggingId(`opp:${opp.id}`);
+            }}
+            style={{
+              position: 'absolute',
+              left: `${opp.x}%`, top: `${opp.y}%`,
+              transform: 'translate(-50%,-50%)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              cursor: readOnly ? 'default' : 'grab',
+              zIndex: 10,
+              transition: draggingId === `opp:${opp.id}` ? 'none' : 'left 0.9s ease-in-out, top 0.9s ease-in-out',
+            }}
+          >
+            <div style={{
+              width: 38, height: 38,
+              borderRadius: '50%',
+              background: '#DC2626',
+              border: '2.5px solid #FCA5A5',
+              boxShadow: '0 0 0 3px rgba(220,38,38,0.3), 0 3px 10px rgba(0,0,0,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 14, color: '#fff',
+            }}>
+              {Number(opp.id.split('-')[1]) + 1}
+            </div>
+          </div>
+        ))}
+
+        {/* 공 — 움직임 모드에서만 표시 */}
+        {phase === 'move' && ball && (
+          <div
+            onPointerDown={readOnly ? undefined : e => {
+              e.preventDefault();
+              dragging.current = 'ball';
+              downPos.current = { x: e.clientX, y: e.clientY };
+              didMove.current = false;
+              setDraggingId('ball');
+            }}
+            style={{
+              position: 'absolute',
+              left: `${ball.x}%`, top: `${ball.y}%`,
+              transform: 'translate(-50%,-50%)',
+              width: 20, height: 20,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle at 35% 35%, #ffffff, #d0d0d0)',
+              border: '1.5px solid rgba(0,0,0,0.4)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.7)',
+              cursor: readOnly ? 'default' : 'grab',
+              zIndex: 12,
+              transition: draggingId === 'ball' ? 'none' : 'left 0.9s ease-in-out, top 0.9s ease-in-out',
+            }}
+          />
+        )}
+
         {/* players */}
         {placedPlayers.map(p => {
           const info = byId(p.playerId);
@@ -221,7 +291,8 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
                 position: 'absolute',
                 left: `${p.x}%`, top: `${p.y}%`,
                 transform: 'translate(-50%,-50%)',
-                transition: draggingId === p.playerId ? 'none' : 'left 0.3s ease, top 0.3s ease',
+                transition: draggingId === p.playerId ? 'none' :
+                  (phase === 'move' ? 'left 0.9s ease-in-out, top 0.9s ease-in-out' : 'left 0.3s ease, top 0.3s ease'),
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 cursor: readOnly ? 'default' : 'grab',
                 zIndex: 10,
