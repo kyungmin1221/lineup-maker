@@ -278,38 +278,22 @@ export function useLineup(initialData) {
     setActiveIdx((cur) => (idx <= cur ? Math.max(0, cur - 1) : cur));
   }, []);
 
-  // 움직임 탭 진입 시 활성 시나리오 초기화 / 스텝 1 기본 포메이션 동기화
+  // 움직임 탭 진입 시 시나리오가 없을 때만 첫 시나리오 생성
   const initAnimSteps = useCallback(() => {
     setQuarters((qs) =>
       qs.map((q, i) => {
         if (i !== activeIdx) return q;
-        const scens = q.scenarios || [];
-
-        if (scens.length === 0) {
-          const firstStep = {
-            id: nextId(),
-            players: q.players.map((p) => ({
-              playerId: p.playerId, x: p.x, y: p.y,
-              ...(p.label ? { label: p.label } : {}),
-            })),
-            opponents: DEFAULT_OPPONENTS.map((o) => ({ ...o })),
-            ball: { ...DEFAULT_BALL },
-          };
-          return { ...q, scenarios: [{ id: nextId(), label: '움직임 1', steps: [firstStep] }] };
-        }
-
-        // opponents/ball 누락 스텝만 보완 (위치는 저장된 값 유지)
-        return {
-          ...q,
-          scenarios: scens.map((sc) => ({
-            ...sc,
-            steps: sc.steps.map((step) => ({
-              ...step,
-              opponents: step.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
-              ball: step.ball || { ...DEFAULT_BALL },
-            })),
+        if ((q.scenarios || []).length > 0) return q; // 이미 있으면 건드리지 않음
+        const firstStep = {
+          id: nextId(),
+          players: q.players.map((p) => ({
+            playerId: p.playerId, x: p.x, y: p.y,
+            ...(p.label ? { label: p.label } : {}),
           })),
+          opponents: DEFAULT_OPPONENTS.map((o) => ({ ...o })),
+          ball: { ...DEFAULT_BALL },
         };
+        return { ...q, scenarios: [{ id: nextId(), label: '움직임 1', steps: [firstStep] }] };
       })
     );
     setAnimStepIdx(0);
