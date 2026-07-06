@@ -163,19 +163,6 @@ export default function ViewPage() {
           readOnly
         />
 
-        <Pitch
-          placedPlayers={displayPlayers}
-          squad={lineup.squad}
-          onDrag={() => {}}
-          onRemove={() => {}}
-          readOnly
-          phase={phase}
-          setPhase={handleSetPhase}
-          formation={quarter.formations?.[phase]}
-          opponents={displayOpponents}
-          ball={displayBall}
-        />
-
         {phase === 'move' && scenarios.length > 0 && (
           <ScenarioTabs
             scenarios={scenarios}
@@ -197,6 +184,19 @@ export default function ViewPage() {
             readOnly
           />
         )}
+
+        <Pitch
+          placedPlayers={displayPlayers}
+          squad={lineup.squad}
+          onDrag={() => {}}
+          onRemove={() => {}}
+          readOnly
+          phase={phase}
+          setPhase={handleSetPhase}
+          formation={quarter.formations?.[phase]}
+          opponents={displayOpponents}
+          ball={displayBall}
+        />
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
 

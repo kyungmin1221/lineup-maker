@@ -228,19 +228,6 @@ function Editor({ id, initialData }) {
           />
         )}
 
-        <Pitch
-          placedPlayers={displayPlayers} squad={squad}
-          onDrag={dragPlayer} onRemove={removeFromPitch}
-          onLabelChange={setPlayerLabel}
-          readOnly={false}
-          phase={phase} setPhase={handleSetPhase}
-          formation={quarter.formations?.[phase]}
-          opponents={displayOpponents}
-          ball={displayBall}
-          onDragOpponent={dragOpponent}
-          onDragBall={dragBall}
-        />
-
         {phase === 'move' && (
           <>
             <ScenarioTabs
@@ -263,6 +250,19 @@ function Editor({ id, initialData }) {
             />
           </>
         )}
+
+        <Pitch
+          placedPlayers={displayPlayers} squad={squad}
+          onDrag={dragPlayer} onRemove={removeFromPitch}
+          onLabelChange={setPlayerLabel}
+          readOnly={false}
+          phase={phase} setPhase={handleSetPhase}
+          formation={quarter.formations?.[phase]}
+          opponents={displayOpponents}
+          ball={displayBall}
+          onDragOpponent={dragOpponent}
+          onDragBall={dragBall}
+        />
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
 

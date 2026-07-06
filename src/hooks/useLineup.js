@@ -298,47 +298,22 @@ export function useLineup(initialData) {
           return { ...q, scenarios: [{ id: nextId(), label: '움직임 1', steps: [firstStep] }] };
         }
 
-        const si = Math.min(activeScenarioIdx, scens.length - 1);
-        const syncLabel = (sp) => {
-          const base = q.players.find((bp) => bp.playerId === sp.playerId);
-          if (!base) return sp;
-          if (base.label) return { ...sp, label: base.label };
-          const { label: _omit, ...rest } = sp;
-          return rest;
-        };
-
+        // opponents/ball 누락 스텝만 보완 (위치는 저장된 값 유지)
         return {
           ...q,
-          scenarios: scens.map((sc, sci) => {
-            if (sci !== si) return sc;
-            const [firstStep, ...restSteps] = sc.steps;
-            if (!firstStep) return sc;
-            const syncedFirst = {
-              ...firstStep,
-              players: firstStep.players.map((sp) => {
-                const base = q.players.find((bp) => bp.playerId === sp.playerId);
-                if (!base) return sp;
-                const synced = { ...sp, x: base.x, y: base.y };
-                if (base.label) synced.label = base.label;
-                else delete synced.label;
-                return synced;
-              }),
-              opponents: firstStep.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
-              ball: firstStep.ball || { ...DEFAULT_BALL },
-            };
-            const migratedRest = restSteps.map((step) => ({
+          scenarios: scens.map((sc) => ({
+            ...sc,
+            steps: sc.steps.map((step) => ({
               ...step,
-              players: step.players.map(syncLabel),
               opponents: step.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
               ball: step.ball || { ...DEFAULT_BALL },
-            }));
-            return { ...sc, steps: [syncedFirst, ...migratedRest] };
-          }),
+            })),
+          })),
         };
       })
     );
     setAnimStepIdx(0);
-  }, [activeIdx, activeScenarioIdx]);
+  }, [activeIdx]);
 
   const addAnimStep = useCallback(() => {
     const currentLen = animSteps.length;
