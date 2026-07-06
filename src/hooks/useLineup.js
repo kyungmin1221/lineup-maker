@@ -45,15 +45,10 @@ export function useLineup(initialData) {
 
   const displayPlayers = (() => {
     if (phase === 'move') {
-      // animSteps가 아직 없으면 기본 위치를 보여줌 (initAnimSteps가 배치되기 전 빈 화면 방지)
       if (animSteps.length === 0) return baseFallback;
       return animSteps[clampedAnimIdx]?.players ?? baseFallback;
     }
-    return quarter.players.map((p) => {
-      if (phase === 'attack') return { ...p, x: p.attackX ?? p.x, y: p.attackY ?? p.y };
-      if (phase === 'defense') return { ...p, x: p.defenseX ?? p.x, y: p.defenseY ?? p.y };
-      return p;
-    });
+    return quarter.players;
   })();
 
   const updatePlayers = useCallback(
@@ -128,20 +123,13 @@ export function useLineup(initialData) {
         qs.map((q, i) => {
           if (i !== activeIdx) return q;
 
-          const phaseCoords = (p) => {
-            if (phase === 'attack') return { x: p.attackX ?? p.x, y: p.attackY ?? p.y };
-            if (phase === 'defense') return { x: p.defenseX ?? p.x, y: p.defenseY ?? p.y };
-            return { x: p.x, y: p.y };
-          };
-
           const slotToPlayerId = new Array(slots.length).fill(null);
           const remaining = q.players.map((p) => p);
           slots.forEach((slot, slotIdx) => {
             if (remaining.length === 0) return;
             let bestI = 0, bestDist = Infinity;
             remaining.forEach((p, ri) => {
-              const c = phaseCoords(p);
-              const d = (c.x - slot.x) ** 2 + (c.y - slot.y) ** 2;
+              const d = (p.x - slot.x) ** 2 + (p.y - slot.y) ** 2;
               if (d < bestDist) { bestDist = d; bestI = ri; }
             });
             slotToPlayerId[slotIdx] = remaining[bestI].playerId;
@@ -160,32 +148,40 @@ export function useLineup(initialData) {
           const updatedExisting = q.players.map((p) => {
             const slotIdx = slotToPlayerId.indexOf(p.playerId);
             if (slotIdx === -1) return p;
-            const slot = slots[slotIdx];
-            if (phase === 'attack') return { ...p, attackX: slot.x, attackY: slot.y };
-            if (phase === 'defense') return { ...p, defenseX: slot.x, defenseY: slot.y };
-            return { ...p, x: slot.x, y: slot.y };
+            return { ...p, x: slots[slotIdx].x, y: slots[slotIdx].y };
           });
 
           const newFromBench = [];
           slots.forEach((slot, slotIdx) => {
             const pid = slotToPlayerId[slotIdx];
-            if (!pid) return;
-            if (placedIds2.has(pid)) return;
-            const entry = { playerId: pid, x: slot.x, y: slot.y };
-            if (phase === 'attack') { entry.attackX = slot.x; entry.attackY = slot.y; }
-            else if (phase === 'defense') { entry.defenseX = slot.x; entry.defenseY = slot.y; }
-            newFromBench.push(entry);
+            if (!pid || placedIds2.has(pid)) return;
+            newFromBench.push({ playerId: pid, x: slot.x, y: slot.y });
+          });
+
+          const newPlayers = [...updatedExisting, ...newFromBench];
+
+          const updatedAnimSteps = (q.animSteps || []).map((step) => {
+            const stepPlayerIds = new Set(step.players.map((p) => p.playerId));
+            const movedPlayers = step.players.map((sp) => {
+              const matched = newPlayers.find((np) => np.playerId === sp.playerId);
+              return matched ? { ...sp, x: matched.x, y: matched.y } : sp;
+            });
+            const newlyAdded = newFromBench
+              .filter((p) => !stepPlayerIds.has(p.playerId))
+              .map((p) => ({ playerId: p.playerId, x: p.x, y: p.y }));
+            return { ...step, players: [...movedPlayers, ...newlyAdded] };
           });
 
           return {
             ...q,
-            players: [...updatedExisting, ...newFromBench],
-            formations: { ...(q.formations || {}), [phase]: formationKey },
+            players: newPlayers,
+            formations: { ...(q.formations || {}), base: formationKey },
+            animSteps: updatedAnimSteps,
           };
         })
       );
     },
-    [activeIdx, phase, squad]
+    [activeIdx, squad]
   );
 
   const setPlayerLabel = useCallback(
@@ -193,17 +189,19 @@ export function useLineup(initialData) {
       setQuarters((qs) =>
         qs.map((q, i) => {
           if (i !== activeIdx) return q;
+          const trimmed = (label ?? '').trim();
+          const applyLabel = (p) => {
+            if (p.playerId !== playerId) return p;
+            if (!trimmed) { const { label: _omit, ...rest } = p; return rest; }
+            return { ...p, label: trimmed };
+          };
           return {
             ...q,
-            players: q.players.map((p) => {
-              if (p.playerId !== playerId) return p;
-              const trimmed = (label ?? '').trim();
-              if (!trimmed) {
-                const { label: _omit, ...rest } = p;
-                return rest;
-              }
-              return { ...p, label: trimmed };
-            }),
+            players: q.players.map(applyLabel),
+            animSteps: (q.animSteps || []).map((step) => ({
+              ...step,
+              players: step.players.map(applyLabel),
+            })),
           };
         })
       );
@@ -236,12 +234,15 @@ export function useLineup(initialData) {
           i === activeIdx
             ? {
                 ...q,
-                players: q.players.map((p) => {
-                  if (p.playerId !== playerId) return p;
-                  if (phase === 'attack') return { ...p, attackX: x, attackY: y };
-                  if (phase === 'defense') return { ...p, defenseX: x, defenseY: y };
-                  return { ...p, x, y };
-                }),
+                players: q.players.map((p) =>
+                  p.playerId !== playerId ? p : { ...p, x, y }
+                ),
+                animSteps: (q.animSteps || []).map((step) => ({
+                  ...step,
+                  players: step.players.map((p) =>
+                    p.playerId === playerId ? { ...p, x, y } : p
+                  ),
+                })),
               }
             : q
         )
@@ -290,15 +291,37 @@ export function useLineup(initialData) {
       qs.map((q, i) => {
         if (i !== activeIdx) return q;
         if (q.animSteps && q.animSteps.length > 0) {
-          // 이전 버전에서 저장된 스텝에 opponents/ball 누락 시 보완
-          return {
-            ...q,
-            animSteps: q.animSteps.map((step) => ({
-              ...step,
-              opponents: step.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
-              ball: step.ball || { ...DEFAULT_BALL },
-            })),
+          const [firstStep, ...restSteps] = q.animSteps;
+          // label 동기화 헬퍼: base players의 label을 animStep player에 반영
+          const syncLabel = (sp) => {
+            const base = q.players.find((bp) => bp.playerId === sp.playerId);
+            if (!base) return sp;
+            if (base.label) return { ...sp, label: base.label };
+            const { label: _omit, ...rest } = sp;
+            return rest;
           };
+          // 스텝 1: 기본 포메이션 위치(x,y) + label 동기화
+          const syncedFirst = {
+            ...firstStep,
+            players: firstStep.players.map((sp) => {
+              const base = q.players.find((bp) => bp.playerId === sp.playerId);
+              if (!base) return sp;
+              const synced = { ...sp, x: base.x, y: base.y };
+              if (base.label) synced.label = base.label;
+              else delete synced.label;
+              return synced;
+            }),
+            opponents: firstStep.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
+            ball: firstStep.ball || { ...DEFAULT_BALL },
+          };
+          // 스텝 2+: label만 동기화 (x,y 커스텀 유지)
+          const migratedRest = restSteps.map((step) => ({
+            ...step,
+            players: step.players.map(syncLabel),
+            opponents: step.opponents || DEFAULT_OPPONENTS.map((o) => ({ ...o })),
+            ball: step.ball || { ...DEFAULT_BALL },
+          }));
+          return { ...q, animSteps: [syncedFirst, ...migratedRest] };
         }
         const firstStep = {
           id: nextId(),

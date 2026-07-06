@@ -120,16 +120,9 @@ export default function ViewPage() {
   const clampedAnimIdx = animSteps.length > 0 ? Math.min(animStepIdx, animSteps.length - 1) : 0;
   const currentStep = animSteps[clampedAnimIdx];
 
-  const displayPlayers = (() => {
-    if (phase === 'move') {
-      return currentStep?.players ?? quarter.players.map(p => ({ playerId: p.playerId, x: p.x, y: p.y }));
-    }
-    return quarter.players.map((p) => {
-      if (phase === 'attack') return { ...p, x: p.attackX ?? p.x, y: p.attackY ?? p.y };
-      if (phase === 'defense') return { ...p, x: p.defenseX ?? p.x, y: p.defenseY ?? p.y };
-      return p;
-    });
-  })();
+  const displayPlayers = phase === 'move'
+    ? (currentStep?.players ?? quarter.players.map(p => ({ playerId: p.playerId, x: p.x, y: p.y })))
+    : quarter.players;
 
   const displayOpponents = phase === 'move' ? (currentStep?.opponents || []) : [];
   const displayBall = phase === 'move' ? (currentStep?.ball || null) : null;

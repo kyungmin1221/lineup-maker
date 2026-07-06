@@ -218,10 +218,12 @@ function Editor({ id, initialData }) {
           addQuarter={addQuarter} removeQuarter={removeQuarter} readOnly={false}
         />
 
-        <FormationChips
-          activeFormation={quarter.formations?.[phase]}
-          onApply={applyFormation}
-        />
+        {phase !== 'move' && (
+          <FormationChips
+            activeFormation={quarter.formations?.base}
+            onApply={applyFormation}
+          />
+        )}
 
         <Pitch
           placedPlayers={displayPlayers} squad={squad}
