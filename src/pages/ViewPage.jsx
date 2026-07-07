@@ -28,6 +28,7 @@ export default function ViewPage() {
   const [animStepIdx, setAnimStepIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [uid, setUid] = useState(null);
+  const [moveHint, setMoveHint] = useState(true);
   const { toast, showToast } = useToast();
   const viewTracked = useRef(false);
 
@@ -53,6 +54,7 @@ export default function ViewPage() {
   const handleSetPhase = (newPhase) => {
     setPhase(newPhase);
     setIsPlaying(false);
+    if (newPhase === 'move') setMoveHint(false);
     setAnimStepIdx(0);
     setActiveScenarioIdx(0);
     if (newPhase === 'move') {
@@ -196,6 +198,8 @@ export default function ViewPage() {
           formation={quarter.formations?.[phase]}
           opponents={displayOpponents}
           ball={displayBall}
+          moveHint={moveHint}
+          onDismissMoveHint={() => setMoveHint(false)}
         />
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />

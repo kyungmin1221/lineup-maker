@@ -3,7 +3,7 @@ import { C, FORMATIONS } from '../constants';
 
 const TAP_MOVE_THRESHOLD = 5; // 픽셀: 이만큼 안 움직였으면 탭으로 간주
 
-export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase, formation, opponents, ball, onDragOpponent, onDragBall }) {
+export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase, formation, opponents, ball, onDragOpponent, onDragBall, moveHint, onDismissMoveHint }) {
   const pitchRef = useRef(null);
   const dragging = useRef(null);
   const downPos = useRef(null);     // pointerdown 시점 좌표
@@ -83,9 +83,42 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
 
         {/* phase toggle (기본/공격/수비) */}
         {phase && setPhase && (
+          <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+
+            {/* 움직임 탭 유도 말풍선 */}
+            {moveHint && phase === 'base' && (
+              <div
+                className="lm-move-hint"
+                onClick={onDismissMoveHint}
+                style={{ display: 'flex', alignItems: 'center', gap: 0, cursor: 'pointer' }}
+              >
+                <div style={{
+                  background: 'rgba(11,17,32,0.82)',
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
+                  color: '#fff',
+                  padding: '6px 12px',
+                  borderRadius: 20,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
+                  border: `1px solid ${C.borderMid}`,
+                }}>
+                  눌러보세요 👆
+                </div>
+                {/* 오른쪽 화살표 */}
+                <div style={{
+                  width: 0, height: 0,
+                  borderTop: '5px solid transparent',
+                  borderBottom: '5px solid transparent',
+                  borderLeft: '7px solid rgba(11,17,32,0.82)',
+                }} />
+              </div>
+            )}
+
           <div
             style={{
-              position: 'absolute', top: 10, right: 10, zIndex: 20,
               display: 'flex',
               background: 'rgba(11,17,32,0.7)',
               border: `1px solid ${C.borderMid}`,
@@ -120,6 +153,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
                 </button>
               );
             })}
+          </div>
           </div>
         )}
 

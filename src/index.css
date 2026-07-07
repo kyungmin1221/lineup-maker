@@ -11,3 +11,12 @@ input, button { font-family: inherit; }
 input::placeholder { opacity: 0.4; }
 
 .lm-token { touch-action: none; }
+
+@keyframes lm-hint-in {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.lm-move-hint {
+  animation: lm-hint-in 0.4s ease forwards;
+}

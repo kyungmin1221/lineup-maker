@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ChevronRight, ArrowRight, Share2, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronRight, ArrowRight, Share2, Plus, Play } from 'lucide-react';
 import { C, FORMATIONS } from '../constants';
 
 // 미니 축구장 (온보딩 시각용)
@@ -128,6 +128,112 @@ function AddAndFormationStatic() {
   );
 }
 
+function MovementVisual() {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setStep(s => (s + 1) % 3), 1100);
+    return () => clearInterval(timer);
+  }, []);
+
+  const positions = [
+    [
+      { x: 50, y: 78 }, { x: 28, y: 58 }, { x: 72, y: 58 },
+      { x: 50, y: 42 }, { x: 22, y: 22 }, { x: 78, y: 22 },
+    ],
+    [
+      { x: 50, y: 78 }, { x: 18, y: 48 }, { x: 82, y: 48 },
+      { x: 50, y: 32 }, { x: 18, y: 14 }, { x: 78, y: 14 },
+    ],
+    [
+      { x: 50, y: 78 }, { x: 14, y: 38 }, { x: 86, y: 38 },
+      { x: 50, y: 22 }, { x: 14, y: 8  }, { x: 86, y: 8  },
+    ],
+  ];
+
+  const ballPositions = [
+    { x: 50, y: 70 },
+    { x: 28, y: 42 },
+    { x: 22, y: 16 },
+  ];
+
+  const ball = ballPositions[step];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      {/* 시나리오 탭 mock */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        {['빌드업', '역습'].map((label, i) => (
+          <div key={label} style={{
+            padding: '4px 12px', borderRadius: 99,
+            fontSize: 11, fontWeight: i === 0 ? 700 : 500,
+            background: i === 0 ? '#F59E0B' : 'transparent',
+            color: i === 0 ? '#0B1120' : C.sub,
+            border: `1.5px solid ${i === 0 ? '#F59E0B' : C.border}`,
+          }}>{label}</div>
+        ))}
+        <div style={{
+          width: 22, height: 22, borderRadius: '50%',
+          border: `1.5px solid ${C.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: C.sub, fontSize: 14,
+        }}>+</div>
+      </div>
+
+      {/* 미니 경기장 */}
+      <MiniPitch
+        players={positions[step].map((p, i) => ({ ...p, label: i + 1 }))}
+        width={170}
+      >
+        {/* 공 */}
+        <div style={{
+          position: 'absolute',
+          left: `${ball.x}%`, top: `${ball.y}%`,
+          transform: 'translate(-50%,-50%)',
+          width: 10, height: 10, borderRadius: '50%',
+          background: 'radial-gradient(circle at 35% 35%, #fff, #ccc)',
+          border: '1px solid rgba(0,0,0,0.4)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+          transition: 'left 0.9s ease-in-out, top 0.9s ease-in-out',
+          zIndex: 12,
+        }} />
+      </MiniPitch>
+
+      {/* AnimBar mock */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '6px 12px', borderRadius: 10,
+        background: C.surface, border: `1px solid ${C.border}`,
+      }}>
+        <div style={{
+          width: 26, height: 26, borderRadius: '50%',
+          background: C.accent,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Play size={11} color={C.accentInk} style={{ marginLeft: 1 }} />
+        </div>
+        {[0, 1, 2].map((n) => (
+          <div key={n} style={{
+            padding: '3px 10px', borderRadius: 99,
+            fontSize: 12, fontWeight: n === step ? 700 : 500,
+            background: n === step ? '#F59E0B' : 'transparent',
+            color: n === step ? '#0B1120' : C.sub,
+            border: `1.5px solid ${n === step ? '#F59E0B' : C.border}`,
+            transition: 'all 0.25s',
+          }}>{n + 1}</div>
+        ))}
+        <div style={{
+          width: 22, height: 22, borderRadius: '50%',
+          border: `1.5px solid ${C.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: C.sub, fontSize: 14,
+        }}>+</div>
+      </div>
+    </div>
+  );
+}
+
 const SLIDES = [
   {
     title: '축구 라인업 위한\n최고의 앱',
@@ -138,6 +244,11 @@ const SLIDES = [
     title: '선수 추가하기',
     description: '직접 입력하여 추가하거나\n포메이션 버튼으로 자동 배치하세요',
     visual: <AddAndFormationStatic />,
+  },
+  {
+    title: '전술 움직임 시뮬레이션',
+    description: '빌드업, 역습 등 상황별 움직임을 만들고\n스텝별로 재생해보세요',
+    visual: <MovementVisual />,
   },
   {
     title: '공유하고 소통하기',
