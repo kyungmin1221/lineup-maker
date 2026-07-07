@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { C } from '../constants';
 
 function ConfirmDialog({ label, onConfirm, onCancel }) {
@@ -59,9 +60,12 @@ export default function ScenarioTabs({ scenarios, activeIdx, onSwitch, onAdd, on
   const inputRef = useRef(null);
 
   const startEdit = (idx, currentLabel) => {
-    setEditingIdx(idx);
-    setEditValue(currentLabel);
-    setTimeout(() => inputRef.current?.select(), 0);
+    flushSync(() => {
+      setEditingIdx(idx);
+      setEditValue(currentLabel);
+    });
+    inputRef.current?.focus();
+    inputRef.current?.select();
   };
 
   const commitEdit = () => {
