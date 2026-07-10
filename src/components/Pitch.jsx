@@ -3,7 +3,7 @@ import { C, FORMATIONS } from '../constants';
 
 const TAP_MOVE_THRESHOLD = 5; // 픽셀: 이만큼 안 움직였으면 탭으로 간주
 
-export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase, formation, opponents, ball, onDragOpponent, onDragBall, moveHint, onDismissMoveHint }) {
+export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase, formation, opponents, ball, onDragOpponent, onDragBall, moveHint, onDismissMoveHint, moveDisabled }) {
   const pitchRef = useRef(null);
   const dragging = useRef(null);
   const downPos = useRef(null);     // pointerdown 시점 좌표
@@ -133,6 +133,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
               { key: 'move', label: '움직임' },
             ].map(({ key, label }) => {
               const active = phase === key;
+              const isDisabled = key === 'move' && moveDisabled;
               return (
                 <button
                   key={key}
@@ -141,12 +142,14 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
                     padding: '5px 11px',
                     borderRadius: 999,
                     border: 'none',
-                    background: active ? C.accent : 'transparent',
-                    color: active ? C.accentInk : C.sub,
+                    background: active && !isDisabled ? C.accent : 'transparent',
+                    color: active && !isDisabled ? C.accentInk : isDisabled ? C.muted : C.sub,
                     fontSize: 12,
                     fontWeight: active ? 700 : 500,
                     cursor: 'pointer',
                     transition: 'background 0.15s, color 0.15s',
+                    textDecoration: isDisabled ? 'line-through' : 'none',
+                    opacity: isDisabled ? 0.5 : 1,
                   }}
                 >
                   {label}

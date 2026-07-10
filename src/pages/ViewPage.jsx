@@ -128,6 +128,7 @@ export default function ViewPage() {
   // 구버전(animSteps) 호환 + 신버전(scenarios) 지원
   const scenarios = quarter.scenarios
     ?? (quarter.animSteps?.length > 0 ? [{ id: 'legacy', label: '움직임 1', steps: quarter.animSteps }] : []);
+  const hasMeaningfulMovement = scenarios.some(sc => (sc.steps || []).length >= 2);
   const clampedScenarioIdx = scenarios.length > 0 ? Math.min(activeScenarioIdx, scenarios.length - 1) : 0;
   const activeScenario = scenarios[clampedScenarioIdx] ?? null;
   const animSteps = activeScenario?.steps || [];
@@ -165,7 +166,22 @@ export default function ViewPage() {
           readOnly
         />
 
-        {phase === 'move' && scenarios.length > 0 && (
+        {phase === 'move' && !hasMeaningfulMovement && (
+          <div style={{
+            margin: '12px 24px 0',
+            padding: '14px 18px',
+            borderRadius: 12,
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            textAlign: 'center',
+            fontSize: 13,
+            color: C.muted,
+          }}>
+            아직 움직임이 존재하지 않습니다
+          </div>
+        )}
+
+        {phase === 'move' && hasMeaningfulMovement && scenarios.length > 0 && (
           <ScenarioTabs
             scenarios={scenarios}
             activeIdx={clampedScenarioIdx}
@@ -174,7 +190,7 @@ export default function ViewPage() {
           />
         )}
 
-        {phase === 'move' && animSteps.length > 0 && (
+        {phase === 'move' && hasMeaningfulMovement && animSteps.length > 0 && (
           <AnimBar
             steps={animSteps}
             activeIdx={clampedAnimIdx}
@@ -200,6 +216,7 @@ export default function ViewPage() {
           ball={displayBall}
           moveHint={moveHint}
           onDismissMoveHint={() => setMoveHint(false)}
+          moveDisabled={!hasMeaningfulMovement}
         />
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
