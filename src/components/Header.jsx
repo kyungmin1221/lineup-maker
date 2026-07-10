@@ -11,6 +11,7 @@ export default function Header({
   editingTeam,
   setEditingTeam,
   onShare,
+  onShareEdit,
   readOnly,
 }) {
   const navigate = useNavigate();
@@ -135,28 +136,56 @@ export default function Header({
         </div>
       </div>
 
-      <button
-        onClick={onShare}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          background: C.accent,
-          color: C.accentInk,
-          border: 'none',
-          borderRadius: 999,
-          padding: '10px 18px',
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: 'pointer',
-          flexShrink: 0,
-          marginTop: 28,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        <Share2 size={14} />
-        공유
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginTop: 28 }}>
+        <button
+          onClick={onShare}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            background: C.accent,
+            color: C.accentInk,
+            border: 'none',
+            borderRadius: 999,
+            padding: '10px 18px',
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: 'pointer',
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Share2 size={14} />
+          공유
+        </button>
+        {onShareEdit && (
+          <button
+            onClick={onShareEdit}
+            style={{
+              fontSize: 11,
+              fontWeight: 500,
+              color: C.sub,
+              background: 'none',
+              border: `1px solid ${C.border}`,
+              borderRadius: 999,
+              padding: '5px 12px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'border-color 0.15s, color 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = C.borderMid;
+              e.currentTarget.style.color = C.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = C.border;
+              e.currentTarget.style.color = C.sub;
+            }}
+          >
+            편집 링크 복사
+          </button>
+        )}
+      </div>
     </div>
   );
 }

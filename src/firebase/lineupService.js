@@ -18,6 +18,23 @@ function generateId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function generateToken() {
+  const arr = new Uint8Array(12);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function getOrCreateEditToken(id) {
+  const ref = doc(db, 'lineups', id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('Lineup not found');
+  const data = snap.data();
+  if (data.editToken) return data.editToken;
+  const token = generateToken();
+  await updateDoc(ref, { editToken: token });
+  return token;
+}
+
 export async function createLineup(lineupData, ownerId) {
   const id = generateId();
   const ref = doc(db, "lineups", id);

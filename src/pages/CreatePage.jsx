@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
 import FormationChips from '../components/FormationChips';
@@ -17,6 +17,7 @@ import {
   addComment as saveComment,
   deleteComment as removeComment,
   subscribeToLineup,
+  getOrCreateEditToken,
 } from '../firebase/lineupService';
 import { ensureSignedIn } from '../firebase/auth';
 import { trackEvent } from '../lib/analytics';
@@ -43,8 +44,10 @@ function dedupeSquadIds(squad) {
 export default function CreatePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [initialData, setInitialData] = useState(null);
   const [loadError, setLoadError] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   // 진입 시 로그인 보장 + 라인업 로드
   useEffect(() => {
@@ -52,27 +55,33 @@ export default function CreatePage() {
     (async () => {
       try {
         const uid = await ensureSignedIn();
+        const urlToken = searchParams.get('token');
         const data = await getLineup(id);
         if (cancelled) return;
         if (!data) {
           setLoadError(true);
           return;
         }
-        // 본인 소유가 아니면 진입점으로 돌려보냄
-        if (data.ownerId && data.ownerId !== uid) {
+        const ownerMatch = !data.ownerId || data.ownerId === uid;
+        const tokenMatch = urlToken && data.editToken && urlToken === data.editToken;
+        // 소유자도 아니고 토큰도 맞지 않으면 진입 차단
+        if (!ownerMatch && !tokenMatch) {
           navigate('/', { replace: true });
           return;
         }
-        // ownerId 없는 옛 라인업은 현재 사용자 것으로 클레임
-        if (!data.ownerId) {
-          await updateLineup(id, { ownerId: uid }).catch(() => {});
-          data.ownerId = uid;
-        }
-        // squad 중복 ID 복구 (있을 경우 Firestore에도 즉시 반영)
-        const dedup = dedupeSquadIds(data.squad);
-        if (dedup.changed) {
-          data.squad = dedup.squad;
-          await updateLineup(id, { squad: dedup.squad }).catch(console.error);
+        if (ownerMatch) {
+          // ownerId 없는 옛 라인업은 현재 사용자 것으로 클레임
+          if (!data.ownerId) {
+            await updateLineup(id, { ownerId: uid }).catch(() => {});
+            data.ownerId = uid;
+          }
+          // squad 중복 ID 복구 (있을 경우 Firestore에도 즉시 반영)
+          const dedup = dedupeSquadIds(data.squad);
+          if (dedup.changed) {
+            data.squad = dedup.squad;
+            await updateLineup(id, { squad: dedup.squad }).catch(console.error);
+          }
+          setIsOwner(true);
         }
         localStorage.setItem(CACHE_KEY, id);
         setInitialData(data);
@@ -84,7 +93,7 @@ export default function CreatePage() {
     return () => {
       cancelled = true;
     };
-  }, [id, navigate]);
+  }, [id, navigate, searchParams]);
 
   if (loadError) {
     return (
@@ -105,10 +114,10 @@ export default function CreatePage() {
     );
   }
 
-  return <Editor id={id} initialData={initialData} />;
+  return <Editor id={id} initialData={initialData} isOwner={isOwner} />;
 }
 
-function Editor({ id, initialData }) {
+function Editor({ id, initialData, isOwner }) {
   const [editingTeam, setEditingTeam] = useState(false);
   const { toast, showToast } = useToast();
 
@@ -176,6 +185,26 @@ function Editor({ id, initialData }) {
     return () => clearTimeout(timer);
   }, [id, teamName, squad, quarters]);
 
+  // 편집 링크 복사 (소유자 전용)
+  const handleShareEdit = async () => {
+    try {
+      const token = await getOrCreateEditToken(id);
+      const url = `${window.location.origin}/edit/${id}?token=${token}`;
+      if (navigator.share) {
+        await navigator.share({ title: `${teamName} 라인업 편집`, url });
+        trackEvent('share_edit_link', { method: 'native' });
+      } else {
+        await navigator.clipboard.writeText(url);
+        trackEvent('share_edit_link', { method: 'clipboard' });
+        showToast('편집 링크가 복사됐어요!');
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      console.error(err);
+      showToast('오류가 발생했습니다.');
+    }
+  };
+
   // 공유 버튼: 링크 공유만
   const handleShare = async () => {
     try {
@@ -214,6 +243,7 @@ function Editor({ id, initialData }) {
           teamName={teamName} setTeamName={setTeamName}
           editingTeam={editingTeam} setEditingTeam={setEditingTeam}
           onShare={handleShare} readOnly={false}
+          onShareEdit={isOwner ? handleShareEdit : undefined}
         />
 
         <QuarterTabs
