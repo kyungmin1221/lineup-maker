@@ -129,7 +129,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
             }}
           >
             {[
-              { key: 'base', label: '기본' },
+              { key: 'base', label: '포지션' },
               { key: 'move', label: '움직임' },
             ].map(({ key, label }) => {
               const active = phase === key;
