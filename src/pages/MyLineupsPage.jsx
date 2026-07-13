@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Trash2 } from 'lucide-react';
+import { ArrowRight, Trash2, Plus } from 'lucide-react';
 import { ensureSignedIn } from '../firebase/auth';
 import {
   createLineup,
@@ -9,6 +9,11 @@ import {
   updateLineup,
   deleteLineup,
 } from '../firebase/lineupService';
+import {
+  createLockerRoom,
+  findMyLockerRooms,
+  deleteLockerRoom,
+} from '../firebase/lockerRoomService';
 import { makeQuarter, C } from '../constants';
 import { trackEvent } from '../lib/analytics';
 import Onboarding from '../components/Onboarding';
@@ -29,6 +34,12 @@ export default function MyLineupsPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [lockerRooms, setLockerRooms] = useState([]);
+  const [lockerLoading, setLockerLoading] = useState(true);
+  const [creatingLocker, setCreatingLocker] = useState(false);
+  const [uid, setUid] = useState(null);
+  const [showLineupTip, setShowLineupTip] = useState(false);
+  const [showLockerTip, setShowLockerTip] = useState(false);
 
   const openGuide = () => {
     trackEvent('view_onboarding_again', { from: 'my_footer' });
@@ -37,24 +48,37 @@ export default function MyLineupsPage() {
 
   useEffect(() => {
     (async () => {
+      let resolvedUid = null;
       try {
-        const uid = await ensureSignedIn();
+        resolvedUid = await ensureSignedIn();
+        setUid(resolvedUid);
 
         // ownerId 없는 옛 라인업이 캐시되어 있으면 본인 것으로 클레임
         const cachedId = localStorage.getItem(CACHE_KEY);
         if (cachedId) {
           const cached = await getLineup(cachedId);
           if (cached && !cached.ownerId) {
-            await updateLineup(cachedId, { ownerId: uid }).catch(() => {});
+            await updateLineup(cachedId, { ownerId: resolvedUid }).catch(() => {});
           }
         }
 
-        const items = await findMyLineups(uid);
+        const items = await findMyLineups(resolvedUid);
         setMyLineups(items);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
+      }
+
+      // 라커룸은 별도로 로드 (실패해도 라인업에 영향 없음)
+      if (!resolvedUid) { setLockerLoading(false); return; }
+      try {
+        const rooms = await findMyLockerRooms(resolvedUid);
+        setLockerRooms(rooms);
+      } catch (err) {
+        console.error('라커룸 로드 실패:', err);
+      } finally {
+        setLockerLoading(false);
       }
     })();
   }, []);
@@ -83,6 +107,33 @@ export default function MyLineupsPage() {
       if (localStorage.getItem(CACHE_KEY) === lineup.id) {
         localStorage.removeItem(CACHE_KEY);
       }
+    } catch (err) {
+      console.error(err);
+      alert('삭제에 실패했습니다.');
+    }
+  };
+
+  const handleCreateLockerRoom = async () => {
+    if (creatingLocker) return;
+    setCreatingLocker(true);
+    try {
+      const currentUid = uid || await ensureSignedIn();
+      const id = await createLockerRoom('새 라커룸', currentUid);
+      navigate(`/locker-room/${id}`);
+    } catch (err) {
+      console.error('라커룸 생성 실패:', err);
+      alert('라커룸 생성에 실패했습니다. Firebase 보안 규칙을 확인해주세요.');
+      setCreatingLocker(false);
+    }
+  };
+
+  const handleDeleteLockerRoom = async (room) => {
+    const label = room.name || '이름 없는 라커룸';
+    const ok = window.confirm(`"${label}" 라커룸을 삭제할까요?\n삭제하면 되돌릴 수 없어요.`);
+    if (!ok) return;
+    try {
+      await deleteLockerRoom(room.id);
+      setLockerRooms((prev) => prev.filter((x) => x.id !== room.id));
     } catch (err) {
       console.error(err);
       alert('삭제에 실패했습니다.');
@@ -169,17 +220,32 @@ export default function MyLineupsPage() {
         {/* My Lineups List */}
         {(loading || myLineups.length > 0) && (
           <div style={{ marginTop: 48 }}>
-            <h2
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: C.text,
-                marginTop: 0,
-                marginBottom: 12,
-              }}
-            >
-              내가 만든 라인업
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: showLineupTip ? 8 : 12 }}>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>나의 라인업</h2>
+              <button
+                onClick={() => setShowLineupTip(v => !v)}
+                style={{
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: showLineupTip ? C.blue : C.raised,
+                  border: `1px solid ${showLineupTip ? C.blue : C.borderMid}`,
+                  color: showLineupTip ? '#fff' : C.muted,
+                  fontSize: 10, fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, transition: 'all 0.15s', lineHeight: 1,
+                }}
+              >
+                ?
+              </button>
+            </div>
+            {showLineupTip && (
+              <p style={{
+                fontSize: 12, color: C.sub, margin: '0 0 12px',
+                padding: '10px 14px', background: C.raised,
+                borderRadius: 10, lineHeight: 1.6,
+              }}>
+                경기별로 만든 라인업 목록이에요. 쿼터별 선수 배치와 움직임을 저장하고 링크로 팀원들에게 공유할 수 있어요.
+              </p>
+            )}
             {loading ? (
               <div
                 style={{
@@ -287,6 +353,108 @@ export default function MyLineupsPage() {
             )}
           </div>
         )}
+
+        {/* 라커룸 섹션 */}
+        <div style={{ marginTop: 48 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: showLockerTip ? 8 : 12 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>라커룸</h2>
+            <button
+              onClick={() => setShowLockerTip(v => !v)}
+              style={{
+                width: 16, height: 16, borderRadius: '50%',
+                background: showLockerTip ? C.blue : C.raised,
+                border: `1px solid ${showLockerTip ? C.blue : C.borderMid}`,
+                color: showLockerTip ? '#fff' : C.muted,
+                fontSize: 10, fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, transition: 'all 0.15s', lineHeight: 1,
+              }}
+            >
+              ?
+            </button>
+          </div>
+          {showLockerTip && (
+            <p style={{
+              fontSize: 12, color: C.sub, margin: '0 0 12px',
+              padding: '10px 14px', background: C.raised,
+              borderRadius: 10, lineHeight: 1.6,
+            }}>
+              팀 선수단을 저장해두는 곳이에요. 새 라인업을 만들 때 라커룸에서 선수를 한 번에 불러올 수 있어요.
+            </p>
+          )}
+          {lockerLoading ? (
+            <div style={{ background: C.surface, borderRadius: 12, padding: '16px 20px', fontSize: 13, color: C.muted }}>
+              불러오는 중...
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {lockerRooms.map((room) => (
+                <div
+                  key={room.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/locker-room/${room.id}`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/locker-room/${room.id}`); } }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: C.surface, border: `1px solid ${C.border}`,
+                    borderRadius: 12, padding: '12px 12px 12px 20px',
+                    color: C.text, cursor: 'pointer',
+                    transition: 'border-color 0.15s, background 0.15s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.borderMid; e.currentTarget.style.background = C.raised; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.surface; }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{
+                      fontSize: 16, fontWeight: 600,
+                      color: room.name ? C.text : C.muted,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block',
+                    }}>
+                      {room.name || '이름 없는 라커룸'}
+                    </span>
+                    <span style={{ fontSize: 12, color: C.muted }}>{room.players.length}명</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500, color: C.sub }}>
+                      열기 <ArrowRight size={14} />
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteLockerRoom(room); }}
+                      aria-label="라커룸 삭제"
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: 32, height: 32, background: 'transparent', border: 'none',
+                        borderRadius: 8, color: '#c43f3f', cursor: 'pointer',
+                      }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={handleCreateLockerRoom}
+                disabled={creatingLocker}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  width: '100%', background: 'transparent',
+                  border: `1px dashed ${C.borderMid}`,
+                  borderRadius: 12, padding: '14px',
+                  fontSize: 14, fontWeight: 600, color: C.sub,
+                  cursor: creatingLocker ? 'wait' : 'pointer',
+                  transition: 'border-color 0.15s, color 0.15s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.blueBright; e.currentTarget.style.color = C.blueBright; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.borderMid; e.currentTarget.style.color = C.sub; }}
+              >
+                <Plus size={15} />
+                {creatingLocker ? '생성 중...' : '라커룸 만들기'}
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 56 }}>

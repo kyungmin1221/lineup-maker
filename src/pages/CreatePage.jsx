@@ -19,6 +19,7 @@ import {
   subscribeToLineup,
   getOrCreateEditToken,
 } from '../firebase/lineupService';
+import { findMyLockerRooms } from '../firebase/lockerRoomService';
 import { ensureSignedIn } from '../firebase/auth';
 import { trackEvent } from '../lib/analytics';
 import { C, nextId } from '../constants';
@@ -84,7 +85,7 @@ export default function CreatePage() {
           setIsOwner(true);
         }
         localStorage.setItem(CACHE_KEY, id);
-        setInitialData(data);
+        setInitialData({ ...data, _uid: uid });
       } catch (err) {
         console.error(err);
         if (!cancelled) setLoadError(true);
@@ -114,11 +115,12 @@ export default function CreatePage() {
     );
   }
 
-  return <Editor id={id} initialData={initialData} isOwner={isOwner} />;
+  return <Editor id={id} initialData={initialData} isOwner={isOwner} uid={initialData._uid} />;
 }
 
-function Editor({ id, initialData, isOwner }) {
+function Editor({ id, initialData, isOwner, uid }) {
   const [editingTeam, setEditingTeam] = useState(false);
+  const [showLockerModal, setShowLockerModal] = useState(false);
   const { toast, showToast } = useToast();
 
   // onSnapshot이 트리거한 상태 변경에서 자동저장이 다시 실행되는 것을 방지
@@ -224,6 +226,22 @@ function Editor({ id, initialData, isOwner }) {
     }
   };
 
+  const handleImportFromLockerRoom = (room) => {
+    setShowLockerModal(false);
+    if (room.players.length === 0) {
+      showToast('선수가 없는 라커룸이에요.');
+      return;
+    }
+    if (bench.length > 0) {
+      const ok = window.confirm(
+        `"${room.name || '라커룸'}"의 선수 ${room.players.length}명을 불러올게요.\n\n확인: 기존 대기선수를 지우고 교체\n취소: 기존 선수 유지하고 추가`
+      );
+      if (ok) bench.forEach(p => deleteFromSquad(p.id));
+    }
+    room.players.forEach(p => addPlayer(p.name, p.number || '-'));
+    showToast(`${room.players.length}명을 대기선수로 불러왔어요!`);
+  };
+
   // 작성자 댓글: 로컬 + Firestore 동시 저장
   const handleAddComment = async (name, text) => {
     addComment(name, text);
@@ -296,6 +314,23 @@ function Editor({ id, initialData, isOwner }) {
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
 
+        {/* 라커룸에서 불러오기 */}
+        <div style={{ padding: '16px 24px 0', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => setShowLockerModal(true)}
+            style={{
+              fontSize: 12, fontWeight: 600, color: C.sub,
+              background: 'transparent', border: `1px solid ${C.border}`,
+              borderRadius: 99, padding: '5px 12px',
+              cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderMid; e.currentTarget.style.color = C.text; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.sub; }}
+          >
+            라커룸에서 불러오기
+          </button>
+        </div>
+
         <Bench
           bench={bench} onAddToPitch={addToPitch}
           onDeleteFromSquad={deleteFromSquad} onAddPlayer={addPlayer} readOnly={false}
@@ -312,6 +347,79 @@ function Editor({ id, initialData, isOwner }) {
       </div>
 
       <Toast message={toast} />
+
+      {showLockerModal && (
+        <LockerRoomModal
+          uid={uid}
+          onImport={handleImportFromLockerRoom}
+          onClose={() => setShowLockerModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function LockerRoomModal({ uid, onImport, onClose }) {
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!uid) { setLoading(false); return; }
+    findMyLockerRooms(uid)
+      .then(r => setRooms(r))
+      .catch(err => console.error('라커룸 목록 로드 실패:', err))
+      .finally(() => setLoading(false));
+  }, [uid]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 200, padding: '0 24px',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 400,
+          background: C.surface,
+          borderRadius: 20,
+          padding: '28px 24px',
+        }}
+      >
+        <p style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>
+          라커룸에서 불러오기
+        </p>
+        {loading ? (
+          <p style={{ fontSize: 14, color: C.muted }}>불러오는 중...</p>
+        ) : rooms.length === 0 ? (
+          <p style={{ fontSize: 14, color: C.muted }}>저장된 라커룸이 없어요. 먼저 라커룸을 만들어보세요.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {rooms.map(r => (
+              <button
+                key={r.id}
+                onClick={() => onImport(r)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: C.raised, border: `1px solid ${C.border}`,
+                  borderRadius: 12, padding: '14px 18px',
+                  color: C.text, fontSize: 15, fontWeight: 600,
+                  cursor: 'pointer', textAlign: 'left',
+                  transition: 'border-color 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = C.borderMid}
+                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+              >
+                <span>{r.name || '이름 없는 라커룸'}</span>
+                <span style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}>{r.players.length}명</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
