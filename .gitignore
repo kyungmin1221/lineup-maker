@@ -17,6 +17,10 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Apps in Toss
+*.ait
+.granite/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
