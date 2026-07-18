@@ -195,8 +195,8 @@ function Editor({ id, initialData, isOwner, uid }) {
     try {
       const token = await getOrCreateEditToken(id);
       if (isTossApp) {
-        const tossLink = await getTossShareLink(`intoss://lineupmaker/edit/${id}?token=${token}`);
-        await share({ message: tossLink });
+        const tossLink = await getTossShareLink(`intoss://lineupmaker/edit/${id}?token=${token}`, 'https://lineup-maker-tau.vercel.app/og-image.png');
+        await share({ message: `${teamName} 라인업 편집\n${tossLink}` });
         trackEvent('share_edit_link', { method: 'toss' });
       } else {
         const webLink = `${window.location.origin}/edit/${id}?token=${token}`;
@@ -215,8 +215,8 @@ function Editor({ id, initialData, isOwner, uid }) {
   const handleShare = async () => {
     try {
       if (isTossApp) {
-        const tossLink = await getTossShareLink(`intoss://lineupmaker/view/${id}`);
-        await share({ message: tossLink });
+        const tossLink = await getTossShareLink(`intoss://lineupmaker/view/${id}`, 'https://lineup-maker-tau.vercel.app/og-image.png');
+        await share({ message: `${teamName} 라인업\n${tossLink}` });
         trackEvent('share_lineup', { method: 'toss' });
       } else {
         const webLink = `${window.location.origin}/view/${id}`;

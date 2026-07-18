@@ -151,8 +151,8 @@ export default function ViewPage() {
           onShare={async () => {
             try {
               if (window.location.hostname.includes('tossmini.com')) {
-                const tossLink = await getTossShareLink(`intoss://lineupmaker/view/${id}`);
-                await share({ message: tossLink });
+                const tossLink = await getTossShareLink(`intoss://lineupmaker/view/${id}`, 'https://lineup-maker-tau.vercel.app/og-image.png');
+                await share({ message: `${lineup.teamName} 라인업\n${tossLink}` });
               } else {
                 await navigator.clipboard.writeText(window.location.href);
                 showToast('링크가 복사됐어요!');
