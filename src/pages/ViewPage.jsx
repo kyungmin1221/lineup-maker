@@ -17,6 +17,7 @@ import { ensureSignedIn } from '../firebase/auth';
 import { useToast } from '../hooks/useToast';
 import { trackEvent } from '../lib/analytics';
 import { C } from '../constants';
+import { share, getTossShareLink } from '@apps-in-toss/web-framework';
 
 export default function ViewPage() {
   const { id } = useParams();
@@ -148,12 +149,16 @@ export default function ViewPage() {
         <Header
           teamName={lineup.teamName}
           onShare={async () => {
-            const url = window.location.href;
-            if (navigator.share) {
-              await navigator.share({ title: `${lineup.teamName} 라인업`, url }).catch(() => {});
-            } else {
-              await navigator.clipboard.writeText(url);
-              showToast('링크가 복사됐어요!');
+            try {
+              if (window.location.hostname.includes('tossmini.com')) {
+                const tossLink = await getTossShareLink(`intoss://lineupmaker/view/${id}`);
+                await share({ message: tossLink });
+              } else {
+                await navigator.clipboard.writeText(window.location.href);
+                showToast('링크가 복사됐어요!');
+              }
+            } catch {
+              showToast('공유 중 오류가 발생했습니다.');
             }
           }}
           readOnly

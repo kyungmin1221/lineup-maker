@@ -23,6 +23,7 @@ import { findMyLockerRooms } from '../firebase/lockerRoomService';
 import { ensureSignedIn } from '../firebase/auth';
 import { trackEvent } from '../lib/analytics';
 import { C, nextId } from '../constants';
+import { share, getTossShareLink } from '@apps-in-toss/web-framework';
 
 const CACHE_KEY = 'lineup-maker:my-lineup-id';
 
@@ -187,18 +188,21 @@ function Editor({ id, initialData, isOwner, uid }) {
     return () => clearTimeout(timer);
   }, [id, teamName, squad, quarters]);
 
-  // 편집 링크 복사 (소유자 전용)
+  const isTossApp = window.location.hostname.includes('tossmini.com');
+
+  // 편집 링크 공유 (소유자 전용)
   const handleShareEdit = async () => {
     try {
       const token = await getOrCreateEditToken(id);
-      const url = `${window.location.origin}/edit/${id}?token=${token}`;
-      if (navigator.share) {
-        await navigator.share({ title: `${teamName} 라인업 편집`, url });
-        trackEvent('share_edit_link', { method: 'native' });
+      if (isTossApp) {
+        const tossLink = await getTossShareLink(`intoss://lineupmaker/edit/${id}?token=${token}`);
+        await share({ message: tossLink });
+        trackEvent('share_edit_link', { method: 'toss' });
       } else {
-        await navigator.clipboard.writeText(url);
-        trackEvent('share_edit_link', { method: 'clipboard' });
+        const webLink = `${window.location.origin}/edit/${id}?token=${token}`;
+        await navigator.clipboard.writeText(webLink);
         showToast('편집 링크가 복사됐어요!');
+        trackEvent('share_edit_link', { method: 'clipboard' });
       }
     } catch (err) {
       if (err?.name === 'AbortError') return;
@@ -207,17 +211,18 @@ function Editor({ id, initialData, isOwner, uid }) {
     }
   };
 
-  // 공유 버튼: 링크 공유만
+  // 공유 버튼: 뷰 링크 공유
   const handleShare = async () => {
     try {
-      const url = `${window.location.origin}/view/${id}`;
-      if (navigator.share) {
-        await navigator.share({ title: `${teamName} 라인업`, url });
-        trackEvent('share_lineup', { method: 'native' });
+      if (isTossApp) {
+        const tossLink = await getTossShareLink(`intoss://lineupmaker/view/${id}`);
+        await share({ message: tossLink });
+        trackEvent('share_lineup', { method: 'toss' });
       } else {
-        await navigator.clipboard.writeText(url);
-        trackEvent('share_lineup', { method: 'clipboard' });
+        const webLink = `${window.location.origin}/view/${id}`;
+        await navigator.clipboard.writeText(webLink);
         showToast('링크가 복사됐어요!');
+        trackEvent('share_lineup', { method: 'clipboard' });
       }
     } catch (err) {
       if (err?.name === 'AbortError') return;
