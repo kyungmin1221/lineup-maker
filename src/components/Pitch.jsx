@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { C, FORMATIONS } from '../constants';
 
 const TAP_MOVE_THRESHOLD = 5; // 픽셀: 이만큼 안 움직였으면 탭으로 간주
@@ -10,6 +11,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
   const didMove = useRef(false);    // 임계값 이상 움직였는지
   const [draggingId, setDraggingId] = useState(null);
   const [editingPlayerId, setEditingPlayerId] = useState(null);
+  const [showOpponents, setShowOpponents] = useState(true);
 
   useEffect(() => {
     const move = e => {
@@ -80,6 +82,31 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
       >
         {/* border */}
         <div style={{ position:'absolute', inset:0, borderRadius:16, border:`1.5px solid ${L}`, pointerEvents:'none', zIndex:5 }} />
+
+        {/* 상대팀 표시 토글 — 움직임 모드에서만 */}
+        {phase === 'move' && opponents && opponents.length > 0 && (
+          <button
+            onClick={() => setShowOpponents(v => !v)}
+            title={showOpponents ? '상대팀 숨기기' : '상대팀 보이기'}
+            style={{
+              position: 'absolute', top: 10, left: 10, zIndex: 20,
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 10px',
+              borderRadius: 999,
+              border: `1px solid ${C.borderMid}`,
+              background: 'rgba(11,17,32,0.7)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              color: showOpponents ? '#FCA5A5' : C.sub,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {showOpponents ? <Eye size={13} /> : <EyeOff size={13} />}
+            상대
+          </button>
+        )}
 
         {/* phase toggle (기본/공격/수비) */}
         {phase && setPhase && (
@@ -247,7 +274,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
         )}
 
         {/* 상대팀 마커 — 움직임 모드에서만 표시 */}
-        {phase === 'move' && (opponents || []).map((opp) => (
+        {phase === 'move' && showOpponents && (opponents || []).map((opp) => (
           <div
             key={opp.id}
             onPointerDown={readOnly ? undefined : e => {
