@@ -317,7 +317,11 @@ function Editor({ id, initialData, isOwner, uid }) {
           onDragOpponent={dragOpponent}
           onDragBall={dragBall}
           showOpponents={showOpponents}
-          onToggleOpponents={() => setShowOpponents(v => !v)}
+          onToggleOpponents={() => {
+            const next = !showOpponents;
+            setShowOpponents(next);
+            updateLineup(id, { showOpponents: next }).catch(console.error);
+          }}
         />
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
