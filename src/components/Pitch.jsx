@@ -82,8 +82,8 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
         {/* border */}
         <div style={{ position:'absolute', inset:0, borderRadius:16, border:`1.5px solid ${L}`, pointerEvents:'none', zIndex:5 }} />
 
-        {/* 상대팀 표시 토글 — 움직임 모드에서만 */}
-        {phase === 'move' && opponents && opponents.length > 0 && (
+        {/* 상대팀 표시 토글 — 움직임 모드 + 제작자 전용 */}
+        {phase === 'move' && opponents && opponents.length > 0 && onToggleOpponents && (
           <button
             onClick={() => onToggleOpponents?.()}
             title={showOpponents ? '상대팀 숨기기' : '상대팀 보이기'}

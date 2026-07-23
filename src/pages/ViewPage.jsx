@@ -30,8 +30,6 @@ export default function ViewPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [uid, setUid] = useState(null);
   const [moveHint, setMoveHint] = useState(true);
-  const [showOpponents, setShowOpponents] = useState(true);
-  const showOpponentsInited = useRef(false);
   const { toast, showToast } = useToast();
   const viewTracked = useRef(false);
 
@@ -45,10 +43,6 @@ export default function ViewPage() {
     const unsub = subscribeToLineup(id, (data) => {
       setLineup(data);
       setLoading(false);
-      if (data && !showOpponentsInited.current) {
-        showOpponentsInited.current = true;
-        setShowOpponents(data.showOpponents ?? true);
-      }
       // 라인업이 실제로 로드된 첫 순간에 view_lineup 한 번만 전송
       if (data && !viewTracked.current) {
         viewTracked.current = true;
@@ -228,8 +222,7 @@ export default function ViewPage() {
           moveHint={moveHint}
           onDismissMoveHint={() => setMoveHint(false)}
           moveDisabled={!hasMeaningfulMovement}
-          showOpponents={showOpponents}
-          onToggleOpponents={() => setShowOpponents(v => !v)}
+          showOpponents={lineup.showOpponents ?? true}
         />
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
