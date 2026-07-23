@@ -6,7 +6,11 @@
       "Bash(npm run *)",
       "Bash(curl -s http://localhost:5173)",
       "Bash(git restore *)",
-      "Bash(./node_modules/.bin/granite --help)"
+      "Bash(./node_modules/.bin/granite --help)",
+      "Bash(xargs ls *)",
+      "Bash(xargs cat *)",
+      "mcp__apps-in-toss__search_docs",
+      "mcp__apps-in-toss__get_doc"
     ]
   }
 }

@@ -1,20 +1,20 @@
-import { defineConfig } from "@apps-in-toss/web-framework/config";
+import { defineConfig } from '@apps-in-toss/web-framework/config';
 
 export default defineConfig({
-  appName: "lineupmaker",
+  appName: 'lineupmaker',
   brand: {
-    displayName: "라인업메이커",
-    primaryColor: "#034694",
-    icon: "https://static.toss.im/appsintoss/59451/a170f5e7-4417-4f18-8e66-c14f1cd498fa.png",
+    displayName: '라인업메이커',
+    primaryColor: '#034694',
+    icon: 'https://static.toss.im/appsintoss/59451/45ca667b-2fca-4d3d-8fde-b840ebaabcdb.png',
   },
   web: {
-    host: "localhost",
+    host: 'localhost',
     port: 5173,
     commands: {
-      dev: "vite",
-      build: "vite build",
+      dev: 'vite',
+      build: 'vite build',
     },
   },
   permissions: [],
-  outdir: "dist",
+  outdir: 'dist',
 });
