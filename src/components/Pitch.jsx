@@ -4,14 +4,13 @@ import { C, FORMATIONS } from '../constants';
 
 const TAP_MOVE_THRESHOLD = 5; // 픽셀: 이만큼 안 움직였으면 탭으로 간주
 
-export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase, formation, opponents, ball, onDragOpponent, onDragBall, moveHint, onDismissMoveHint, moveDisabled }) {
+export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelChange, readOnly, phase, setPhase, formation, opponents, ball, onDragOpponent, onDragBall, moveHint, onDismissMoveHint, moveDisabled, showOpponents = true, onToggleOpponents }) {
   const pitchRef = useRef(null);
   const dragging = useRef(null);
   const downPos = useRef(null);     // pointerdown 시점 좌표
   const didMove = useRef(false);    // 임계값 이상 움직였는지
   const [draggingId, setDraggingId] = useState(null);
   const [editingPlayerId, setEditingPlayerId] = useState(null);
-  const [showOpponents, setShowOpponents] = useState(true);
 
   useEffect(() => {
     const move = e => {
@@ -86,7 +85,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
         {/* 상대팀 표시 토글 — 움직임 모드에서만 */}
         {phase === 'move' && opponents && opponents.length > 0 && (
           <button
-            onClick={() => setShowOpponents(v => !v)}
+            onClick={() => onToggleOpponents?.()}
             title={showOpponents ? '상대팀 숨기기' : '상대팀 보이기'}
             style={{
               position: 'absolute', top: 10, left: 10, zIndex: 20,

@@ -122,6 +122,7 @@ export default function CreatePage() {
 function Editor({ id, initialData, isOwner, uid }) {
   const [editingTeam, setEditingTeam] = useState(false);
   const [showLockerModal, setShowLockerModal] = useState(false);
+  const [showOpponents, setShowOpponents] = useState(initialData?.showOpponents ?? true);
   const { toast, showToast } = useToast();
 
   // onSnapshot이 트리거한 상태 변경에서 자동저장이 다시 실행되는 것을 방지
@@ -183,10 +184,10 @@ function Editor({ id, initialData, isOwner, uid }) {
       return;
     }
     const timer = setTimeout(() => {
-      updateLineup(id, { teamName, squad, quarters }).catch(console.error);
+      updateLineup(id, { teamName, squad, quarters, showOpponents }).catch(console.error);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [id, teamName, squad, quarters]);
+  }, [id, teamName, squad, quarters, showOpponents]);
 
   const isTossApp = window.location.hostname.includes('tossmini.com');
 
@@ -315,6 +316,8 @@ function Editor({ id, initialData, isOwner, uid }) {
           ball={displayBall}
           onDragOpponent={dragOpponent}
           onDragBall={dragBall}
+          showOpponents={showOpponents}
+          onToggleOpponents={() => setShowOpponents(v => !v)}
         />
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
