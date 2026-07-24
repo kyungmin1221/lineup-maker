@@ -67,5 +67,6 @@ VITE_FIREBASE_APP_ID=
 
 ## 배포
 
-- **웹**: Vercel (현재 배포 중)
-- **모바일**: App in Toss (예정)
+- **웹**: Vercel
+  -  https://lineup-maker-tau.vercel.app/
+- **모바일**: App in Toss 의 건강 카테고리에 배포
