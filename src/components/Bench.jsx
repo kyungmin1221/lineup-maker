@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { C } from '../constants';
 
-export default function Bench({ bench, onAddToPitch, onDeleteFromSquad, onAddPlayer, readOnly }) {
+export default function Bench({
+  bench,
+  onAddToPitch,
+  onDeleteFromSquad,
+  onAddPlayer,
+  readOnly,
+}) {
   const [name, setName] = useState('');
 
   const handleAdd = () => {
@@ -14,20 +20,42 @@ export default function Bench({ bench, onAddToPitch, onDeleteFromSquad, onAddPla
   return (
     <div style={{ padding: '20px 24px 0' }}>
       {/* label */}
-      <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
-        대기 선수 {bench.length > 0 && <span style={{ color: C.blueBright }}>{bench.length}</span>}
+      <p
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          color: C.muted,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          marginBottom: 12,
+        }}
+      >
+        대기 선수{' '}
+        {bench.length > 0 && (
+          <span style={{ color: C.blueBright }}>{bench.length}</span>
+        )}
       </p>
 
       {/* chips */}
       {bench.length > 0 ? (
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
-          {bench.map(p => (
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            paddingBottom: 4,
+          }}
+        >
+          {bench.map((p) => (
             <div
               key={p.id}
               onClick={() => !readOnly && onAddToPitch(p)}
               style={{
                 flexShrink: 0,
-                display: 'flex', alignItems: 'center', gap: 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
                 padding: '7px 12px 7px 8px',
                 borderRadius: 12,
                 background: C.surface,
@@ -36,38 +64,63 @@ export default function Bench({ bench, onAddToPitch, onDeleteFromSquad, onAddPla
               }}
             >
               {/* substitute badge */}
-              <span style={{
-                height: 24, borderRadius: 6,
-                padding: '0 6px',
-                background: C.raised,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, fontWeight: 700, color: C.blueLight,
-                flexShrink: 0,
-              }}>
+              <span
+                style={{
+                  height: 24,
+                  borderRadius: 6,
+                  padding: '0 6px',
+                  background: C.raised,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: C.blueLight,
+                  flexShrink: 0,
+                }}
+              >
                 교체
               </span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: C.text, whiteSpace: 'nowrap' }}>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: C.text,
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {p.name}
               </span>
               {!readOnly && (
                 <X
                   size={12}
-                  onClick={e => { e.stopPropagation(); onDeleteFromSquad(p.id); }}
-                  style={{ color: C.muted, cursor: 'pointer', flexShrink: 0, marginLeft: 2 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteFromSquad(p.id);
+                  }}
+                  style={{
+                    color: C.muted,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    marginLeft: 2,
+                  }}
                 />
               )}
             </div>
           ))}
         </div>
       ) : (
-        <p style={{ fontSize: 13, color: C.muted, paddingBottom: 4 }}>전원 필드에 배치됨</p>
+        <p style={{ fontSize: 13, color: C.muted, paddingBottom: 4 }}>
+          전원 필드에 배치됨
+        </p>
       )}
 
       {/* add player form */}
       {!readOnly && (
         <div
           style={{
-            display: 'flex', alignItems: 'center',
+            display: 'flex',
+            alignItems: 'center',
             marginTop: 12,
             borderRadius: 12,
             background: C.surface,
@@ -77,21 +130,31 @@ export default function Bench({ bench, onAddToPitch, onDeleteFromSquad, onAddPla
         >
           <input
             value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="선수 이름"
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            placeholder="선수 이름을 입력하세요"
             style={{
-              flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              padding: '12px 14px', fontSize: 14, color: C.text,
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              padding: '12px 14px',
+              fontSize: 14,
+              color: C.text,
             }}
           />
           <button
             onClick={handleAdd}
             style={{
-              width: 44, height: 44,
-              background: C.blue, border: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', flexShrink: 0,
+              width: 44,
+              height: 44,
+              background: C.blue,
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
             <Plus size={18} color="#fff" />
