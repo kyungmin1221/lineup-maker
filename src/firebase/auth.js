@@ -12,12 +12,14 @@ export function ensureSignedIn() {
       if (user) {
         unsub();
         resolve(user.uid);
+      } else {
+        // 캐시된 유저 없음 → 익명 로그인
+        signInAnonymously(auth).catch((err) => {
+          unsub();
+          signInPromise = null;
+          reject(err);
+        });
       }
-    });
-    signInAnonymously(auth).catch((err) => {
-      unsub();
-      signInPromise = null;
-      reject(err);
     });
   });
 

@@ -481,8 +481,13 @@ export function useLineup(initialData) {
   }, []);
 
   const currentStep = animSteps[clampedAnimIdx];
-  const displayOpponents = phase === 'move' ? (currentStep?.opponents || DEFAULT_OPPONENTS) : [];
+  const showOpponents = quarter.showOpponents ?? true;
+  const displayOpponents = phase === 'move' && showOpponents ? (currentStep?.opponents || DEFAULT_OPPONENTS) : [];
   const displayBall = phase === 'move' ? (currentStep?.ball || null) : null;
+
+  const setShowOpponents = useCallback((val) => {
+    setQuarters(qs => qs.map((q, i) => i !== activeIdx ? q : { ...q, showOpponents: val }));
+  }, [activeIdx]);
 
   return {
     teamName, setTeamName,
@@ -492,6 +497,7 @@ export function useLineup(initialData) {
     animStepIdx: clampedAnimIdx, setAnimStepIdx,
     animSteps,
     quarter, bench, displayPlayers, displayOpponents, displayBall,
+    showOpponents, setShowOpponents,
     addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
     deleteFromSquad, addPlayer,
     addQuarter, removeQuarter,

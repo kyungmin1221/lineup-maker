@@ -140,7 +140,8 @@ export default function ViewPage() {
     ? (currentStep?.players ?? quarter.players.map(p => ({ playerId: p.playerId, x: p.x, y: p.y })))
     : quarter.players;
 
-  const displayOpponents = phase === 'move' ? (currentStep?.opponents || []) : [];
+  const rawShowOpponents = quarter.showOpponents;
+  const displayOpponents = phase === 'move' && (rawShowOpponents ?? true) ? (currentStep?.opponents || []) : [];
   const displayBall = phase === 'move' ? (currentStep?.ball || null) : null;
 
   return (
@@ -222,7 +223,6 @@ export default function ViewPage() {
           moveHint={moveHint}
           onDismissMoveHint={() => setMoveHint(false)}
           moveDisabled={!hasMeaningfulMovement}
-          showOpponents={lineup.showOpponents ?? true}
         />
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />

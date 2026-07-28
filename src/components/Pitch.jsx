@@ -83,7 +83,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
         <div style={{ position:'absolute', inset:0, borderRadius:16, border:`1.5px solid ${L}`, pointerEvents:'none', zIndex:5 }} />
 
         {/* 상대팀 표시 토글 — 움직임 모드 + 제작자 전용 */}
-        {phase === 'move' && opponents && opponents.length > 0 && onToggleOpponents && (
+        {phase === 'move' && onToggleOpponents && (
           <button
             onClick={() => onToggleOpponents?.()}
             title={showOpponents ? '상대팀 숨기기' : '상대팀 보이기'}
@@ -273,7 +273,7 @@ export default function Pitch({ placedPlayers, squad, onDrag, onRemove, onLabelC
         )}
 
         {/* 상대팀 마커 — 움직임 모드에서만 표시 */}
-        {phase === 'move' && showOpponents && (opponents || []).map((opp) => (
+        {phase === 'move' && (opponents || []).map((opp) => (
           <div
             key={opp.id}
             onPointerDown={readOnly ? undefined : e => {
