@@ -472,12 +472,18 @@ export function useLineup(initialData) {
   );
 
   const syncRemoteComments = useCallback((remoteQuarters) => {
-    setQuarters((prev) =>
-      prev.map((q, i) => ({
-        ...q,
-        comments: remoteQuarters[i]?.comments ?? q.comments,
-      }))
-    );
+    setQuarters((prev) => {
+      let changed = false;
+      const next = prev.map((q, i) => {
+        const rc = remoteQuarters[i]?.comments ?? q.comments;
+        if (JSON.stringify(rc) !== JSON.stringify(q.comments)) {
+          changed = true;
+          return { ...q, comments: rc };
+        }
+        return q;
+      });
+      return changed ? next : prev;
+    });
   }, []);
 
   const currentStep = animSteps[clampedAnimIdx];

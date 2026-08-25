@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
@@ -123,9 +123,6 @@ function Editor({ id, initialData, isOwner, uid }) {
   const [showLockerModal, setShowLockerModal] = useState(false);
   const { toast, showToast } = useToast();
 
-  // onSnapshot이 트리거한 상태 변경에서 자동저장이 다시 실행되는 것을 방지
-  const skipNextSave = useRef(false);
-
   const {
     teamName, setTeamName,
     squad, quarters, activeIdx, setActiveIdx,
@@ -168,20 +165,13 @@ function Editor({ id, initialData, isOwner, uid }) {
   // 친구 댓글을 실시간으로 동기화
   useEffect(() => {
     const unsub = subscribeToLineup(id, (remote) => {
-      if (remote?.quarters) {
-        skipNextSave.current = true;
-        syncRemoteComments(remote.quarters);
-      }
+      if (remote?.quarters) syncRemoteComments(remote.quarters);
     });
     return unsub;
   }, [id, syncRemoteComments]);
 
   // 라인업 변경 시 1초 후 자동 저장
   useEffect(() => {
-    if (skipNextSave.current) {
-      skipNextSave.current = false;
-      return;
-    }
     const timer = setTimeout(() => {
       updateLineup(id, { teamName, squad, quarters }).catch(console.error);
     }, 1000);
