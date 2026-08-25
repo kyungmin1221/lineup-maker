@@ -137,7 +137,7 @@ export default function ViewPage() {
   const currentStep = animSteps[clampedAnimIdx];
 
   const displayPlayers = phase === 'move'
-    ? (currentStep?.players ?? quarter.players.map(p => ({ playerId: p.playerId, x: p.x, y: p.y })))
+    ? (currentStep?.players ?? quarter.players.map(p => ({ playerId: p.playerId, x: p.x, y: p.y, ...(p.label ? { label: p.label } : {}) })))
     : quarter.players;
 
   const rawShowOpponents = quarter.showOpponents;
