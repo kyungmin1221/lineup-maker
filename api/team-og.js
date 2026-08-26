@@ -1,12 +1,7 @@
-import { CRAWLER_UA, fetchFirestoreField, readIndexHtml, sendHtml, applyOgTags } from './_og.js';
+import { fetchFirestoreField, readIndexHtml, sendHtml, applyOgTags } from './_og.js';
 
 export default async function handler(req, res) {
   const { id } = req.query;
-
-  if (!CRAWLER_UA.test(req.headers['user-agent'] || '')) {
-    sendHtml(res, await readIndexHtml(req));
-    return;
-  }
 
   const teamName = await fetchFirestoreField('lockerRooms', id, 'name');
   const title = teamName ? `${teamName} 팀기록` : 'lineupmaker';
