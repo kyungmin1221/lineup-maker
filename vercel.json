@@ -9,6 +9,7 @@
   },
   "rewrites": [
     { "source": "/view/:id", "destination": "/api/lineup-og?id=:id" },
+    { "source": "/locker-room/:id", "has": [{ "type": "query", "key": "tab" }], "destination": "/api/team-og?id=:id" },
     { "source": "/locker-room/:id", "destination": "/api/team-og?id=:id" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
