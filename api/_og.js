@@ -34,7 +34,10 @@ async function getFirebaseToken(apiKey) {
 export async function fetchFirestoreField(collection, id, field) {
   const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
   const apiKey = process.env.VITE_FIREBASE_API_KEY;
-  if (!projectId || !apiKey || !id) return null;
+  if (!projectId || !apiKey || !id) {
+    console.log('[og-debug] fetchFirestoreField skipped: missing projectId/apiKey/id', { collection, id, hasProjectId: !!projectId, hasApiKey: !!apiKey });
+    return null;
+  }
 
   try {
     const idToken = await getFirebaseToken(apiKey);
@@ -44,13 +47,19 @@ export async function fetchFirestoreField(collection, id, field) {
       `/databases/(default)/documents/${collection}/${id}?key=${apiKey}`;
     const r = await fetch(url, { headers });
     if (!r.ok) {
+      // 실패 원인(권한 문제인지, 문서가 없는지 등)을 그대로 남김
+      const body = await r.text().catch(() => '');
+      console.log('[og-debug] Firestore fetch failed', { collection, id, field, status: r.status, hadToken: !!idToken, body: body.slice(0, 500) });
       // 토큰 만료 등으로 실패했으면 캐시를 비워서 다음 요청 때 새로 발급
       cachedToken = null;
       return null;
     }
     const data = await r.json();
-    return data.fields?.[field]?.stringValue ?? null;
-  } catch (_) {
+    const value = data.fields?.[field]?.stringValue ?? null;
+    console.log('[og-debug] Firestore fetch ok', { collection, id, field, value });
+    return value;
+  } catch (err) {
+    console.log('[og-debug] fetchFirestoreField threw', { collection, id, field, error: String(err) });
     return null;
   }
 }
@@ -59,13 +68,22 @@ export async function fetchFirestoreField(collection, id, field) {
 // 요청은 클라이언트 앱이 어차피 데이터를 다시 불러오므로, 서버에서
 // Firebase 왕복 없이 정적 파일을 바로 반환
 //
-// 주의: 카카오톡은 일부러 빼뒀음. "KakaoTalk"만으로 매칭하면 실제
-// 카카오톡 인앱 브라우저로 링크를 연 사용자의 UA에도 걸릴 위험이 큼
-// (미리보기 스크랩 봇과 인앱 브라우저 UA가 비슷해서 정확한 구분 문자열을
-// 확신할 수 없었음). 아래 목록은 스크랩 봇 전용 UA임을 확신할 수 있는
-// 것만 남겼고, 나머지 플랫폼(카카오톡 포함)은 프로덕션 로그에서 실제
-// user-agent를 확인한 뒤 정확한 패턴으로 추가하는 걸 권장
-export const CRAWLER_UA = /facebookexternalhit|Twitterbot|Slackbot|Discordbot|TelegramBot|LinkedInBot/i;
+// 카카오톡 스크랩 봇: "scrap"을 구분자로 씀. 카카오 개발자센터에서도 이
+// 링크 미리보기 기능을 "스크랩 메시지"라고 부르는 걸 확인했고, 인앱
+// 브라우저 UA에는 보통 "scrap"이 들어가지 않아서 상대적으로 안전한
+// 구분자로 판단해 추가함. 만약 실제 사용자가 여전히 느려진다면(=인앱
+// 브라우저가 오탐되고 있다면) logIfKakao 로그로 실제 UA를 확인해서
+// 더 좁혀야 함
+export const CRAWLER_UA = /facebookexternalhit|Twitterbot|Slackbot|Discordbot|TelegramBot|LinkedInBot|kakaotalk.*scrap|scrap.*kakaotalk/i;
+
+// 카카오 관련 요청의 실제 user-agent를 Vercel 로그에 남김 — 스크랩 봇과
+// 인앱 브라우저를 구분할 정확한 문자열을 확인하기 위한 임시 진단용
+export function logIfKakao(req) {
+  const ua = req.headers['user-agent'] || '';
+  if (/kakao/i.test(ua)) {
+    console.log('[og-debug] kakao-related user-agent:', ua);
+  }
+}
 
 export async function readIndexHtml(req) {
   try {
