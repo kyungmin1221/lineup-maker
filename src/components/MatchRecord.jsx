@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Crown, Plus, Minus } from 'lucide-react';
+import { Crown, Plus, Minus, ChevronDown } from 'lucide-react';
 import { C, ATTENDANCE_OPTIONS, attendanceMeta } from '../constants';
 
 export function AttendancePicker({ status, onSelect, onClose }) {
@@ -77,17 +77,47 @@ export default function MatchRecord({ squad, record, onSetAttendance, onSetGoals
   const assists = record?.assists || {};
   const mvpPlayerId = record?.mvpPlayerId ?? null;
   const [openAttendanceFor, setOpenAttendanceFor] = useState(null);
+  const [expanded, setExpanded] = useState(false);
 
   if (!squad || squad.length === 0) return null;
 
   return (
     <div style={{ padding: '20px 24px 0' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-          경기 기록
-        </p>
-      </div>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          width: '100%', gap: 8, marginBottom: expanded ? 16 : 0,
+          background: C.surface, border: `1px solid ${expanded ? C.borderMid : C.border}`,
+          borderRadius: 12, padding: '12px 16px',
+          cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.borderMid; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = expanded ? C.borderMid : C.border; }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+            경기 기록
+          </p>
+          <span style={{
+            fontSize: 11, fontWeight: 600,
+            padding: '1px 7px', borderRadius: 99,
+            background: `${C.blue}25`, color: C.blueBright,
+          }}>
+            {squad.length}
+          </span>
+        </div>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: C.sub }}>
+          {expanded ? '접기' : '펼치기'}
+          <ChevronDown
+            size={14}
+            style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
+          />
+        </span>
+      </button>
 
+      {expanded && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {squad.map((p) => {
           const isMvp = mvpPlayerId === p.id;
@@ -176,6 +206,7 @@ export default function MatchRecord({ squad, record, onSetAttendance, onSetGoals
           );
         })}
       </div>
+      )}
     </div>
   );
 }
