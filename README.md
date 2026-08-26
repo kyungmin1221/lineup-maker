@@ -80,9 +80,9 @@ VITE_FIREBASE_APP_ID=
 
 ## 배포
 
-<<<<<<< HEAD
-- **웹**: Vercel (현재 배포 중)
-- **모바일**: App in Toss (예정)
+- **웹**: Vercel
+  - https://lineup-maker-tau.vercel.app/
+- **모바일**: App in Toss 의 건강 카테고리에 배포
 
 ## 데이터 모델 메모
 
@@ -117,8 +117,3 @@ VITE_FIREBASE_APP_ID=
 
 ### 3. 푸시 알림 — 미착수
 댓글 알림 등. 위 2번과 같은 서버/mTLS 인프라가 선행 조건이라 함께 진행 예정. 메시지 템플릿 등록·문구 심사도 리드타임이 있어 미리 신청해두는 게 유리합니다.
-=======
-- **웹**: Vercel
-  -  https://lineup-maker-tau.vercel.app/
-- **모바일**: App in Toss 의 건강 카테고리에 배포
->>>>>>> c5fe9e8fbde2dcd3bf012f094ea0d8aafb608dbe

@@ -20,13 +20,12 @@ function preloadFirebasePlugin() {
 }
 
 export default defineConfig({
-<<<<<<< HEAD
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), preloadFirebasePlugin()],
   resolve: {
     alias: {
       '@apps-in-toss/web-framework': path.resolve('./src/lib/tossFramework.js'),
-=======
-  plugins: [react(), tailwindcss(), preloadFirebasePlugin()],
+    },
+  },
   build: {
     rollupOptions: {
       output: {
@@ -37,7 +36,6 @@ export default defineConfig({
           }
         },
       },
->>>>>>> c5fe9e8fbde2dcd3bf012f094ea0d8aafb608dbe
     },
   },
 })

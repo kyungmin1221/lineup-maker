@@ -122,9 +122,7 @@ export default function CreatePage() {
 function Editor({ id, initialData, isOwner, uid }) {
   const [editingTeam, setEditingTeam] = useState(false);
   const [showLockerModal, setShowLockerModal] = useState(false);
-<<<<<<< HEAD
   const [showTeamLinkModal, setShowTeamLinkModal] = useState(false);
-  const [showOpponents, setShowOpponents] = useState(initialData?.showOpponents ?? true);
   const [teamId, setTeamId] = useState(initialData?.teamId ?? null);
   const [teamRoomName, setTeamRoomName] = useState(null);
   const { toast, showToast } = useToast();
@@ -137,13 +135,6 @@ function Editor({ id, initialData, isOwner, uid }) {
       .catch(() => setTeamRoomName(null));
   }, [teamId]);
 
-  // onSnapshot이 트리거한 상태 변경에서 자동저장이 다시 실행되는 것을 방지
-  const skipNextSave = useRef(false);
-
-=======
-  const { toast, showToast } = useToast();
-
->>>>>>> c5fe9e8fbde2dcd3bf012f094ea0d8aafb608dbe
   const {
     teamName, setTeamName,
     record, setAttendance, setGoals, setAssists, setMvp,
@@ -195,17 +186,10 @@ function Editor({ id, initialData, isOwner, uid }) {
   // 라인업 변경 시 1초 후 자동 저장
   useEffect(() => {
     const timer = setTimeout(() => {
-<<<<<<< HEAD
-      updateLineup(id, { teamName, squad, quarters, showOpponents, record, teamId }).catch(console.error);
+      updateLineup(id, { teamName, squad, quarters, record, teamId }).catch(console.error);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [id, teamName, squad, quarters, showOpponents, record, teamId]);
-=======
-      updateLineup(id, { teamName, squad, quarters }).catch(console.error);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [id, teamName, squad, quarters]);
->>>>>>> c5fe9e8fbde2dcd3bf012f094ea0d8aafb608dbe
+  }, [id, teamName, squad, quarters, record, teamId]);
 
   const isTossApp = window.location.hostname.includes('tossmini.com');
 
