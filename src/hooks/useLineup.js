@@ -511,17 +511,28 @@ export function useLineup(initialData) {
   }, []);
 
   const syncRemoteComments = useCallback((remoteQuarters) => {
-    setQuarters((prev) =>
-      prev.map((q, i) => ({
-        ...q,
-        comments: remoteQuarters[i]?.comments ?? q.comments,
-      }))
-    );
+    setQuarters((prev) => {
+      let changed = false;
+      const next = prev.map((q, i) => {
+        const rc = remoteQuarters[i]?.comments ?? q.comments;
+        if (JSON.stringify(rc) !== JSON.stringify(q.comments)) {
+          changed = true;
+          return { ...q, comments: rc };
+        }
+        return q;
+      });
+      return changed ? next : prev;
+    });
   }, []);
 
   const currentStep = animSteps[clampedAnimIdx];
-  const displayOpponents = phase === 'move' ? (currentStep?.opponents || DEFAULT_OPPONENTS) : [];
+  const showOpponents = quarter.showOpponents ?? true;
+  const displayOpponents = phase === 'move' && showOpponents ? (currentStep?.opponents || DEFAULT_OPPONENTS) : [];
   const displayBall = phase === 'move' ? (currentStep?.ball || null) : null;
+
+  const setShowOpponents = useCallback((val) => {
+    setQuarters(qs => qs.map((q, i) => i !== activeIdx ? q : { ...q, showOpponents: val }));
+  }, [activeIdx]);
 
   return {
     teamName, setTeamName,
@@ -532,6 +543,7 @@ export function useLineup(initialData) {
     animStepIdx: clampedAnimIdx, setAnimStepIdx,
     animSteps,
     quarter, bench, displayPlayers, displayOpponents, displayBall,
+    showOpponents, setShowOpponents,
     addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
     deleteFromSquad, addPlayer, importPlayers,
     addQuarter, removeQuarter,

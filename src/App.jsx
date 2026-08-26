@@ -21,7 +21,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <RouteTracker />
-      <Suspense fallback={null}>
+      <Suspense fallback={<div style={{ background: '#0B1120', minHeight: '100vh' }} />}>
         <Routes>
           <Route path="/" element={<EntryPage />} />
           <Route path="/my" element={<MyLineupsPage />} />

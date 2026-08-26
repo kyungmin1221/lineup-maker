@@ -4,8 +4,6 @@ import { ensureSignedIn } from '../firebase/auth';
 import {
   createLineup,
   findMyLineups,
-  getLineup,
-  updateLineup,
 } from '../firebase/lineupService';
 import { makeQuarter, C } from '../constants';
 import { trackEvent } from '../lib/analytics';
@@ -15,10 +13,11 @@ const CACHE_KEY = 'lineup-maker:my-lineup-id';
 const ONBOARDED_KEY = 'lineup-maker:onboarded';
 
 function buildEmptyLineup() {
+  const quarter = makeQuarter('1쿼터', []);
   return {
     teamName: '',
     squad: [],
-    quarters: [makeQuarter('1쿼터', [])],
+    quarters: [{ ...quarter, formations: { base: '4-3-3' } }],
   };
 }
 
@@ -36,28 +35,25 @@ export default function EntryPage() {
     if (ran.current) return;
     ran.current = true;
 
+    // 기존 사용자: 캐시된 ID로 바로 이동 (Firestore 호출 없음)
+    const cachedId = localStorage.getItem(CACHE_KEY);
+    if (cachedId) {
+      navigate(`/edit/${cachedId}`, { replace: true });
+      return;
+    }
+
+    // 신규 사용자: 로그인 후 라인업 생성
     (async () => {
       try {
         const uid = await ensureSignedIn();
 
-        // ownerId 없는 옛 라인업이 캐시되어 있으면 본인 것으로 클레임
-        const cachedId = localStorage.getItem(CACHE_KEY);
-        if (cachedId) {
-          const cached = await getLineup(cachedId);
-          if (cached && !cached.ownerId) {
-            await updateLineup(cachedId, { ownerId: uid }).catch(() => {});
-          }
-        }
-
         const items = await findMyLineups(uid);
-
         if (items.length > 0) {
-          // 가장 최근 라인업으로 직행
+          localStorage.setItem(CACHE_KEY, items[0].id);
           navigate(`/edit/${items[0].id}`, { replace: true });
           return;
         }
 
-        // 신규 사용자: 빈 라인업 자동 생성 후 직행
         const newId = await createLineup(buildEmptyLineup(), uid);
         trackEvent('create_lineup', { trigger: 'auto_first_visit' });
         localStorage.setItem(CACHE_KEY, newId);

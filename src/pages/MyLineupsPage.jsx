@@ -22,10 +22,11 @@ import Onboarding from '../components/Onboarding';
 const CACHE_KEY = 'lineup-maker:my-lineup-id';
 
 function buildEmptyLineup() {
+  const quarter = makeQuarter('1쿼터', []);
   return {
     teamName: '',
     squad: [],
-    quarters: [makeQuarter('1쿼터', [])],
+    quarters: [{ ...quarter, formations: { base: '4-3-3' } }],
   };
 }
 

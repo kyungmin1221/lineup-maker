@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
@@ -57,9 +57,8 @@ export default function CreatePage() {
     let cancelled = false;
     (async () => {
       try {
-        const uid = await ensureSignedIn();
         const urlToken = searchParams.get('token');
-        const data = await getLineup(id);
+        const [uid, data] = await Promise.all([ensureSignedIn(), getLineup(id)]);
         if (cancelled) return;
         if (!data) {
           setLoadError(true);
@@ -123,6 +122,7 @@ export default function CreatePage() {
 function Editor({ id, initialData, isOwner, uid }) {
   const [editingTeam, setEditingTeam] = useState(false);
   const [showLockerModal, setShowLockerModal] = useState(false);
+<<<<<<< HEAD
   const [showTeamLinkModal, setShowTeamLinkModal] = useState(false);
   const [showOpponents, setShowOpponents] = useState(initialData?.showOpponents ?? true);
   const [teamId, setTeamId] = useState(initialData?.teamId ?? null);
@@ -140,6 +140,10 @@ function Editor({ id, initialData, isOwner, uid }) {
   // onSnapshot이 트리거한 상태 변경에서 자동저장이 다시 실행되는 것을 방지
   const skipNextSave = useRef(false);
 
+=======
+  const { toast, showToast } = useToast();
+
+>>>>>>> c5fe9e8fbde2dcd3bf012f094ea0d8aafb608dbe
   const {
     teamName, setTeamName,
     record, setAttendance, setGoals, setAssists, setMvp,
@@ -148,6 +152,7 @@ function Editor({ id, initialData, isOwner, uid }) {
     scenarios, activeScenarioIdx, switchScenario,
     animStepIdx, setAnimStepIdx, animSteps,
     quarter, bench, displayPlayers, displayOpponents, displayBall,
+    showOpponents, setShowOpponents,
     addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
     deleteFromSquad, addPlayer, importPlayers,
     addQuarter, removeQuarter,
@@ -182,25 +187,25 @@ function Editor({ id, initialData, isOwner, uid }) {
   // 친구 댓글을 실시간으로 동기화
   useEffect(() => {
     const unsub = subscribeToLineup(id, (remote) => {
-      if (remote?.quarters) {
-        skipNextSave.current = true;
-        syncRemoteComments(remote.quarters);
-      }
+      if (remote?.quarters) syncRemoteComments(remote.quarters);
     });
     return unsub;
   }, [id, syncRemoteComments]);
 
   // 라인업 변경 시 1초 후 자동 저장
   useEffect(() => {
-    if (skipNextSave.current) {
-      skipNextSave.current = false;
-      return;
-    }
     const timer = setTimeout(() => {
+<<<<<<< HEAD
       updateLineup(id, { teamName, squad, quarters, showOpponents, record, teamId }).catch(console.error);
     }, 1000);
     return () => clearTimeout(timer);
   }, [id, teamName, squad, quarters, showOpponents, record, teamId]);
+=======
+      updateLineup(id, { teamName, squad, quarters }).catch(console.error);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [id, teamName, squad, quarters]);
+>>>>>>> c5fe9e8fbde2dcd3bf012f094ea0d8aafb608dbe
 
   const isTossApp = window.location.hostname.includes('tossmini.com');
 
@@ -228,6 +233,10 @@ function Editor({ id, initialData, isOwner, uid }) {
   // 공유 버튼: 뷰 링크 공유
   const handleShare = async () => {
     try {
+      // 공유 전 현재 상태(showOpponents 포함)를 Firebase에 강제 저장
+      // showOpponents를 top-level에도 저장 (구버전 ViewPage 하위 호환)
+      const currentShowOpponents = quarters[activeIdx]?.showOpponents ?? true;
+      await updateLineup(id, { teamName, squad, quarters, showOpponents: currentShowOpponents });
       if (isTossApp) {
         const tossLink = await getTossShareLink(`intoss://lineupmaker/view/${id}`, 'https://lineup-maker-tau.vercel.app/og-image.png');
         await share({ message: `${teamName} 라인업\n${tossLink}` });
@@ -338,9 +347,14 @@ function Editor({ id, initialData, isOwner, uid }) {
           onDragBall={dragBall}
           showOpponents={showOpponents}
           onToggleOpponents={() => {
-            const next = !showOpponents;
-            setShowOpponents(next);
-            updateLineup(id, { showOpponents: next }).catch(console.error);
+            const newVal = !showOpponents;
+            setShowOpponents(newVal);
+            // debounce에 의존하지 않고 즉시 저장 (share sheet 열림으로 타이머가 취소될 수 있음)
+            const updatedQuarters = quarters.map((q, i) =>
+              i !== activeIdx ? q : { ...q, showOpponents: newVal }
+            );
+            // top-level showOpponents도 저장 (구버전 ViewPage 하위 호환)
+            updateLineup(id, { quarters: updatedQuarters, showOpponents: newVal }).catch(console.error);
           }}
         />
 
