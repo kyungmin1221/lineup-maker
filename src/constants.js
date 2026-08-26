@@ -23,6 +23,16 @@ export const C = {
 export const nextId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
+export const ATTENDANCE_OPTIONS = [
+  { key: 'present', label: '출석', color: '#2ecc71' },
+  { key: 'late', label: '지각', color: '#f0ad4e' },
+  { key: 'absent', label: '결석', color: '#c43f3f' },
+];
+
+export function attendanceMeta(status) {
+  return ATTENDANCE_OPTIONS.find((o) => o.key === status) || { label: '미기록', color: C.muted };
+}
+
 export const STARTER_SQUAD = [
   { id: '1',  name: '유상엽', number: '1'  },
   { id: '2',  name: '이주호', number: '2'  },

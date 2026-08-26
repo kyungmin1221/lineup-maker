@@ -95,6 +95,25 @@ export async function findMyLineups(ownerId) {
   return items;
 }
 
+// 특정 팀(라커룸)에 연결된 라인업 목록 실시간 구독 - unsubscribe 함수 반환
+export function subscribeToTeamLineups(teamId, callback) {
+  const q = query(collection(db, "lineups"), where("teamId", "==", teamId));
+  return onSnapshot(q, (snap) => {
+    const items = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        teamName: data.teamName || '',
+        squad: data.squad || [],
+        record: data.record || { attendance: {}, goals: {}, assists: {}, mvpPlayerId: null },
+        updatedAt: data.updatedAt?.toMillis?.() ?? 0,
+      };
+    });
+    items.sort((a, b) => b.updatedAt - a.updatedAt);
+    callback(items);
+  });
+}
+
 // 실시간 구독 - unsubscribe 함수 반환
 export function subscribeToLineup(id, callback) {
   const ref = doc(db, "lineups", id);

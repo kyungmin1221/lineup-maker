@@ -13,6 +13,7 @@ import {
   createLockerRoom,
   findMyLockerRooms,
   deleteLockerRoom,
+  archiveLineupRecord,
 } from '../firebase/lockerRoomService';
 import { makeQuarter, C } from '../constants';
 import { trackEvent } from '../lib/analytics';
@@ -109,6 +110,12 @@ export default function MyLineupsPage() {
     );
     if (!ok) return;
     try {
+      // 팀에 연결된 라인업이면, 지우기 전에 그 안의 기록(골/도움/출석/MVP)을
+      // 팀 문서에 보관해서 라인업이 사라져도 팀 통계에서 빠지지 않게 함
+      const full = await getLineup(lineup.id);
+      if (full?.teamId) {
+        await archiveLineupRecord(full.teamId, full.record || {}).catch(console.error);
+      }
       await deleteLineup(lineup.id);
       setMyLineups((prev) => prev.filter((x) => x.id !== lineup.id));
       if (localStorage.getItem(CACHE_KEY) === lineup.id) {
@@ -559,28 +566,30 @@ export default function MyLineupsPage() {
                     >
                       열기 <ArrowRight size={14} />
                     </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteLockerRoom(room);
-                      }}
-                      aria-label="라커룸 삭제"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 32,
-                        height: 32,
-                        background: 'transparent',
-                        border: 'none',
-                        borderRadius: 8,
-                        color: '#c43f3f',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {room.ownerId === uid && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteLockerRoom(room);
+                        }}
+                        aria-label="라커룸 삭제"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 32,
+                          height: 32,
+                          background: 'transparent',
+                          border: 'none',
+                          borderRadius: 8,
+                          color: '#c43f3f',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

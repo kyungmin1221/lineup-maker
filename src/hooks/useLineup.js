@@ -8,6 +8,7 @@ import {
   DEFAULT_OPPONENTS,
   DEFAULT_BALL,
 } from '../constants';
+import { withAttendance, withGoalsDelta, withAssistsDelta, withMvp } from '../lib/recordEdits';
 
 // 구버전 데이터(animSteps) → 새 구조(scenarios) 마이그레이션
 function migrateQuarter(q) {
@@ -24,6 +25,15 @@ function migrateQuarter(q) {
 export function useLineup(initialData) {
   const [teamName, setTeamName] = useState(initialData?.teamName ?? '이름없음 FC');
   const [squad, setSquad] = useState(initialData?.squad ?? STARTER_SQUAD);
+  const [record, setRecord] = useState(() => {
+    const r = initialData?.record;
+    return {
+      attendance: r?.attendance ?? {},
+      goals: r?.goals ?? {},
+      assists: r?.assists ?? {},
+      mvpPlayerId: r?.mvpPlayerId ?? null,
+    };
+  });
   const [quarters, setQuarters] = useState(
     (initialData?.quarters ?? [makeQuarter('1쿼터', STARTER_LAYOUT.map((p) => ({ ...p })))])
       .map(migrateQuarter)
@@ -259,6 +269,18 @@ export function useLineup(initialData) {
     setSquad((s) => [...s, { id, name, number }]);
   }, []);
 
+  // 라커룸에서 선수 가져오기 전용: 원본 id를 그대로 보존해야
+  // 이 라인업의 기록(record)이 팀 통계 집계에서 같은 선수로 매칭됨
+  const importPlayers = useCallback((players) => {
+    setSquad((s) => {
+      const existingIds = new Set(s.map((p) => p.id));
+      const toAdd = players
+        .filter((p) => !existingIds.has(p.id))
+        .map((p) => ({ id: p.id, name: p.name, number: p.number || '-' }));
+      return [...s, ...toAdd];
+    });
+  }, []);
+
   const addQuarter = useCallback(
     (copy) => {
       const label = `${quarters.length + 1}쿼터`;
@@ -471,6 +493,23 @@ export function useLineup(initialData) {
     [activeIdx]
   );
 
+  // status가 falsy면 미기록으로 되돌림 (component가 순환 로직을 쥐고 명시적 값을 넘김)
+  const setAttendance = useCallback((playerId, status) => {
+    setRecord((r) => withAttendance(r, playerId, status));
+  }, []);
+
+  const setGoals = useCallback((playerId, delta) => {
+    setRecord((r) => withGoalsDelta(r, playerId, delta));
+  }, []);
+
+  const setAssists = useCallback((playerId, delta) => {
+    setRecord((r) => withAssistsDelta(r, playerId, delta));
+  }, []);
+
+  const setMvp = useCallback((playerId) => {
+    setRecord((r) => withMvp(r, playerId));
+  }, []);
+
   const syncRemoteComments = useCallback((remoteQuarters) => {
     setQuarters((prev) =>
       prev.map((q, i) => ({
@@ -486,6 +525,7 @@ export function useLineup(initialData) {
 
   return {
     teamName, setTeamName,
+    record, setAttendance, setGoals, setAssists, setMvp,
     squad, quarters, activeIdx, setActiveIdx,
     phase, setPhase,
     scenarios, activeScenarioIdx, switchScenario,
@@ -493,7 +533,7 @@ export function useLineup(initialData) {
     animSteps,
     quarter, bench, displayPlayers, displayOpponents, displayBall,
     addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
-    deleteFromSquad, addPlayer,
+    deleteFromSquad, addPlayer, importPlayers,
     addQuarter, removeQuarter,
     initAnimSteps, addAnimStep, removeAnimStep,
     addScenario, removeScenario, renameScenario, switchScenario,

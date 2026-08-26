@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, Pause, Plus } from 'lucide-react';
+import { Play, Pause, Plus, Eye, EyeOff } from 'lucide-react';
 import { C } from '../constants';
 
 function ConfirmDialog({ stepLabel, onConfirm, onCancel }) {
@@ -62,6 +62,8 @@ export default function AnimBar({
   onAddStep,
   onRemoveStep,
   readOnly,
+  showOpponents = true,
+  onToggleOpponents,
 }) {
   const [pendingRemove, setPendingRemove] = useState(null);
   const canPlay = steps.length >= 2;
@@ -109,6 +111,30 @@ export default function AnimBar({
         >
           {isPlaying ? <Pause size={13} /> : <Play size={13} style={{ marginLeft: 1 }} />}
         </button>
+
+        {/* 상대팀 표시 토글 */}
+        {onToggleOpponents && (
+          <button
+            onClick={onToggleOpponents}
+            title={showOpponents ? '상대 숨기기' : '상대 보이기'}
+            style={{
+              flexShrink: 0,
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              border: `1.5px solid ${showOpponents ? C.accent : C.border}`,
+              background: showOpponents ? `${C.accent}22` : 'transparent',
+              color: showOpponents ? C.accent : C.muted,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            {showOpponents ? <Eye size={13} /> : <EyeOff size={13} />}
+          </button>
+        )}
 
         {/* 스텝 탭들 */}
         {steps.map((step, i) => {

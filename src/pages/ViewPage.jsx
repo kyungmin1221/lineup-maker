@@ -7,6 +7,7 @@ import AnimBar from '../components/AnimBar';
 import ScenarioTabs from '../components/ScenarioTabs';
 import Bench from '../components/Bench';
 import Comments from '../components/Comments';
+import MatchRecord from '../components/MatchRecord';
 import Toast from '../components/Toast';
 import {
   subscribeToLineup,
@@ -228,6 +229,14 @@ export default function ViewPage() {
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
 
         <Bench bench={bench} readOnly />
+
+        <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
+
+        <MatchRecord
+          squad={lineup.squad}
+          record={lineup.record || { attendance: {}, goals: {}, assists: {}, mvpPlayerId: null }}
+          readOnly
+        />
 
         <div style={{ height: 1, background: C.border, margin: '20px 24px 0' }} />
 

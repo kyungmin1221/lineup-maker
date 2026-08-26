@@ -8,6 +8,7 @@ import AnimBar from '../components/AnimBar';
 import ScenarioTabs from '../components/ScenarioTabs';
 import Bench from '../components/Bench';
 import Comments from '../components/Comments';
+import MatchRecord from '../components/MatchRecord';
 import Toast from '../components/Toast';
 import { useLineup } from '../hooks/useLineup';
 import { useToast } from '../hooks/useToast';
@@ -19,7 +20,7 @@ import {
   subscribeToLineup,
   getOrCreateEditToken,
 } from '../firebase/lineupService';
-import { findMyLockerRooms } from '../firebase/lockerRoomService';
+import { findMyLockerRooms, getLockerRoom } from '../firebase/lockerRoomService';
 import { ensureSignedIn } from '../firebase/auth';
 import { trackEvent } from '../lib/analytics';
 import { C, nextId } from '../constants';
@@ -122,21 +123,33 @@ export default function CreatePage() {
 function Editor({ id, initialData, isOwner, uid }) {
   const [editingTeam, setEditingTeam] = useState(false);
   const [showLockerModal, setShowLockerModal] = useState(false);
+  const [showTeamLinkModal, setShowTeamLinkModal] = useState(false);
   const [showOpponents, setShowOpponents] = useState(initialData?.showOpponents ?? true);
+  const [teamId, setTeamId] = useState(initialData?.teamId ?? null);
+  const [teamRoomName, setTeamRoomName] = useState(null);
   const { toast, showToast } = useToast();
+
+  // 소속 팀 이름 조회 (teamId 바뀔 때만)
+  useEffect(() => {
+    if (!teamId) { setTeamRoomName(null); return; }
+    getLockerRoom(teamId)
+      .then((room) => setTeamRoomName(room?.name || '이름 없는 라커룸'))
+      .catch(() => setTeamRoomName(null));
+  }, [teamId]);
 
   // onSnapshot이 트리거한 상태 변경에서 자동저장이 다시 실행되는 것을 방지
   const skipNextSave = useRef(false);
 
   const {
     teamName, setTeamName,
+    record, setAttendance, setGoals, setAssists, setMvp,
     squad, quarters, activeIdx, setActiveIdx,
     phase, setPhase,
     scenarios, activeScenarioIdx, switchScenario,
     animStepIdx, setAnimStepIdx, animSteps,
     quarter, bench, displayPlayers, displayOpponents, displayBall,
     addToPitch, removeFromPitch, dragPlayer, setPlayerLabel, applyFormation,
-    deleteFromSquad, addPlayer,
+    deleteFromSquad, addPlayer, importPlayers,
     addQuarter, removeQuarter,
     initAnimSteps, addAnimStep, removeAnimStep,
     addScenario, removeScenario, renameScenario,
@@ -184,10 +197,10 @@ function Editor({ id, initialData, isOwner, uid }) {
       return;
     }
     const timer = setTimeout(() => {
-      updateLineup(id, { teamName, squad, quarters, showOpponents }).catch(console.error);
+      updateLineup(id, { teamName, squad, quarters, showOpponents, record, teamId }).catch(console.error);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [id, teamName, squad, quarters, showOpponents]);
+  }, [id, teamName, squad, quarters, showOpponents, record, teamId]);
 
   const isTossApp = window.location.hostname.includes('tossmini.com');
 
@@ -244,8 +257,15 @@ function Editor({ id, initialData, isOwner, uid }) {
       );
       if (ok) bench.forEach(p => deleteFromSquad(p.id));
     }
-    room.players.forEach(p => addPlayer(p.name, p.number || '-'));
+    importPlayers(room.players);
+    setTeamId(room.id);
     showToast(`${room.players.length}명을 대기선수로 불러왔어요!`);
+  };
+
+  const handleLinkTeam = (room) => {
+    setShowTeamLinkModal(false);
+    setTeamId(room.id);
+    showToast(`"${room.name || '라커룸'}"에 연결됐어요!`);
   };
 
   // 작성자 댓글: 로컬 + Firestore 동시 저장
@@ -326,26 +346,56 @@ function Editor({ id, initialData, isOwner, uid }) {
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
 
-        {/* 라커룸에서 불러오기 */}
-        <div style={{ padding: '16px 24px 0', display: 'flex', justifyContent: 'flex-end' }}>
-          <button
-            onClick={() => setShowLockerModal(true)}
-            style={{
-              fontSize: 12, fontWeight: 600, color: C.sub,
-              background: 'transparent', border: `1px solid ${C.border}`,
-              borderRadius: 99, padding: '5px 12px',
-              cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderMid; e.currentTarget.style.color = C.text; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.sub; }}
-          >
-            라커룸에서 불러오기
-          </button>
+        {/* 소속 팀 + 라커룸에서 불러오기 */}
+        <div style={{ padding: '16px 24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            소속 팀 · {teamRoomName || '미지정'}
+          </span>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <button
+              onClick={() => setShowTeamLinkModal(true)}
+              style={{
+                fontSize: 12, fontWeight: 600, color: C.sub,
+                background: 'transparent', border: `1px solid ${C.border}`,
+                borderRadius: 99, padding: '5px 12px',
+                cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderMid; e.currentTarget.style.color = C.text; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.sub; }}
+            >
+              {teamId ? '팀 변경' : '팀 연결'}
+            </button>
+            <button
+              onClick={() => setShowLockerModal(true)}
+              style={{
+                fontSize: 12, fontWeight: 600, color: C.sub,
+                background: 'transparent', border: `1px solid ${C.border}`,
+                borderRadius: 99, padding: '5px 12px',
+                cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderMid; e.currentTarget.style.color = C.text; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.sub; }}
+            >
+              라커룸에서 불러오기
+            </button>
+          </div>
         </div>
 
         <Bench
           bench={bench} onAddToPitch={addToPitch}
           onDeleteFromSquad={deleteFromSquad} onAddPlayer={addPlayer} readOnly={false}
+        />
+
+        <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
+
+        <MatchRecord
+          squad={squad}
+          record={record}
+          onSetAttendance={setAttendance}
+          onSetGoals={setGoals}
+          onSetAssists={setAssists}
+          onSetMvp={setMvp}
+          readOnly={false}
         />
 
         <div style={{ margin: '20px 24px 0', height: 1, background: C.border }} />
@@ -363,15 +413,25 @@ function Editor({ id, initialData, isOwner, uid }) {
       {showLockerModal && (
         <LockerRoomModal
           uid={uid}
-          onImport={handleImportFromLockerRoom}
+          title="라커룸에서 불러오기"
+          onSelect={handleImportFromLockerRoom}
           onClose={() => setShowLockerModal(false)}
+        />
+      )}
+
+      {showTeamLinkModal && (
+        <LockerRoomModal
+          uid={uid}
+          title="소속 팀 연결"
+          onSelect={handleLinkTeam}
+          onClose={() => setShowTeamLinkModal(false)}
         />
       )}
     </div>
   );
 }
 
-function LockerRoomModal({ uid, onImport, onClose }) {
+function LockerRoomModal({ uid, title, onSelect, onClose }) {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -402,7 +462,7 @@ function LockerRoomModal({ uid, onImport, onClose }) {
         }}
       >
         <p style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>
-          라커룸에서 불러오기
+          {title}
         </p>
         {loading ? (
           <p style={{ fontSize: 14, color: C.muted }}>불러오는 중...</p>
@@ -413,7 +473,7 @@ function LockerRoomModal({ uid, onImport, onClose }) {
             {rooms.map(r => (
               <button
                 key={r.id}
-                onClick={() => onImport(r)}
+                onClick={() => onSelect(r)}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   background: C.raised, border: `1px solid ${C.border}`,
