@@ -1,8 +1,7 @@
-import { CRAWLER_UA, fetchFirestoreField, readIndexHtml, sendHtml, applyOgTags, logIfKakao } from './_og.js';
+import { CRAWLER_UA, fetchFirestoreField, readIndexHtml, sendHtml, applyOgTags } from './_og.js';
 
 export default async function handler(req, res) {
   const { id } = req.query;
-  logIfKakao(req);
 
   if (!CRAWLER_UA.test(req.headers['user-agent'] || '')) {
     sendHtml(res, await readIndexHtml(req));

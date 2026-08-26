@@ -113,7 +113,7 @@ export default function LockerRoomPage() {
       const path = `/locker-room/${id}?tab=stats`;
       if (window.location.hostname.includes('tossmini.com')) {
         const tossLink = await getTossShareLink(`intoss://lineupmaker${path}`, 'https://lineup-maker-tau.vercel.app/og-image.png');
-        await share({ message: `${name || '팀'} 팀기록\n${tossLink}` });
+        await share({ message: `${name || '팀'} 기록\n${tossLink}` });
       } else {
         await navigator.clipboard.writeText(`${window.location.origin}${path}`);
         showToast('기록 링크가 복사됐어요!');
