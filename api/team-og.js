@@ -8,13 +8,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  const teamName = await fetchFirestoreField('lineups', id, 'teamName');
-  const title = teamName ?? 'lineupmaker';
+  const teamName = await fetchFirestoreField('lockerRooms', id, 'name');
+  const title = teamName ? `${teamName} 팀기록` : 'lineupmaker';
   const description = teamName
-    ? `${teamName}의 라인업을 확인해보세요`
+    ? `${teamName}의 팀 기록을 확인해보세요`
     : '나만의 라인업을 만들고 공유하세요';
   const siteUrl = 'https://lineup-maker-tau.vercel.app';
-  const pageUrl = id ? `${siteUrl}/view/${id}` : siteUrl;
+  const pageUrl = id ? `${siteUrl}/locker-room/${id}` : siteUrl;
 
   const html = applyOgTags(await readIndexHtml(req), { title, description, url: pageUrl });
   sendHtml(res, html);

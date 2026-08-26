@@ -2,10 +2,14 @@
   "functions": {
     "api/lineup-og.js": {
       "includeFiles": "dist/index.html"
+    },
+    "api/team-og.js": {
+      "includeFiles": "dist/index.html"
     }
   },
   "rewrites": [
     { "source": "/view/:id", "destination": "/api/lineup-og?id=:id" },
+    { "source": "/locker-room/:id", "destination": "/api/team-og?id=:id" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
