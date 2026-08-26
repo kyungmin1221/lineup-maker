@@ -67,6 +67,13 @@ export default function LockerRoomPage() {
     return unsub;
   }, [id, navigate]);
 
+  // 페이지 타이틀 동적 업데이트 — 네이티브 공유 시 "lineupmaker" 대신 팀이름이 나오도록
+  useEffect(() => {
+    if (!name) return;
+    document.title = `${name} 팀기록`;
+    return () => { document.title = 'lineupmaker'; };
+  }, [name]);
+
   // 선수 목록 자동 저장 (구독이 되돌려준 갱신은 다시 저장하지 않음)
   useEffect(() => {
     if (!loaded) return;
