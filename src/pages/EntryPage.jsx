@@ -54,10 +54,16 @@ export default function EntryPage() {
           return;
         }
 
-        const newId = await createLineup(buildEmptyLineup(), uid);
+        const emptyLineup = buildEmptyLineup();
+        const newId = await createLineup(emptyLineup, uid);
         trackEvent('create_lineup', { trigger: 'auto_first_visit' });
         localStorage.setItem(CACHE_KEY, newId);
-        navigate(`/edit/${newId}`, { replace: true });
+        // 방금 만든 데이터를 그대로 넘겨서, CreatePage가 같은 문서를
+        // 또 조회하는 불필요한 Firestore 왕복을 건너뛰게 함
+        navigate(`/edit/${newId}`, {
+          replace: true,
+          state: { initialData: { ...emptyLineup, id: newId, ownerId: uid } },
+        });
       } catch (err) {
         console.error(err);
       }

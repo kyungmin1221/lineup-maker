@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import QuarterTabs from '../components/QuarterTabs';
 import FormationChips from '../components/FormationChips';
@@ -47,6 +47,7 @@ function dedupeSquadIds(squad) {
 export default function CreatePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [initialData, setInitialData] = useState(null);
   const [loadError, setLoadError] = useState(false);
@@ -58,7 +59,14 @@ export default function CreatePage() {
     (async () => {
       try {
         const urlToken = searchParams.get('token');
-        const [uid, data] = await Promise.all([ensureSignedIn(), getLineup(id)]);
+        // EntryPage가 방금 만든 라인업이면 데이터를 state로 이미 들고 있으므로
+        // 같은 문서를 또 조회하는 Firestore 왕복을 생략
+        const preloaded = location.state?.initialData;
+        const skipFetch = preloaded && preloaded.id === id;
+        const [uid, data] = await Promise.all([
+          ensureSignedIn(),
+          skipFetch ? Promise.resolve(preloaded) : getLineup(id),
+        ]);
         if (cancelled) return;
         if (!data) {
           // 캐시된 id가 삭제된 라인업을 가리키고 있으면 지워서, 다음 방문 때
@@ -101,7 +109,7 @@ export default function CreatePage() {
     return () => {
       cancelled = true;
     };
-  }, [id, navigate, searchParams]);
+  }, [id, navigate, searchParams, location.state]);
 
   if (loadError) {
     return (
