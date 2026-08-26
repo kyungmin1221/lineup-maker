@@ -61,6 +61,9 @@ export default function CreatePage() {
         const [uid, data] = await Promise.all([ensureSignedIn(), getLineup(id)]);
         if (cancelled) return;
         if (!data) {
+          // 캐시된 id가 삭제된 라인업을 가리키고 있으면 지워서, 다음 방문 때
+          // EntryPage가 같은 죽은 id로 계속 리다이렉트하는 걸 막음
+          if (localStorage.getItem(CACHE_KEY) === id) localStorage.removeItem(CACHE_KEY);
           setLoadError(true);
           return;
         }
@@ -68,6 +71,9 @@ export default function CreatePage() {
         const tokenMatch = urlToken && data.editToken && urlToken === data.editToken;
         // 소유자도 아니고 토큰도 맞지 않으면 진입 차단
         if (!ownerMatch && !tokenMatch) {
+          // 캐시가 안 지워지면 '/' → 이 라인업으로 리다이렉트 → 여기서 다시 '/'로
+          // 튕기는 무한 루프에 빠짐
+          if (localStorage.getItem(CACHE_KEY) === id) localStorage.removeItem(CACHE_KEY);
           navigate('/', { replace: true });
           return;
         }
@@ -102,7 +108,17 @@ export default function CreatePage() {
       <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 48, fontWeight: 800, color: C.blueLight, marginBottom: 8 }}>404</div>
-          <div style={{ fontSize: 14, color: C.muted }}>라인업을 찾을 수 없습니다.</div>
+          <div style={{ fontSize: 14, color: C.muted, marginBottom: 20 }}>라인업을 찾을 수 없습니다.</div>
+          <button
+            onClick={() => navigate('/my')}
+            style={{
+              background: C.accent, color: C.accentInk, border: 'none',
+              borderRadius: 999, padding: '10px 20px', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            내 라인업으로 이동
+          </button>
         </div>
       </div>
     );
