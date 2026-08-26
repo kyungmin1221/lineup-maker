@@ -10,16 +10,21 @@ import {
 } from '../constants';
 import { withAttendance, withGoalsDelta, withAssistsDelta, withMvp } from '../lib/recordEdits';
 
-// 구버전 데이터(animSteps) → 새 구조(scenarios) 마이그레이션
 function migrateQuarter(q) {
-  if (q.scenarios !== undefined) return q;
-  const steps = q.animSteps || [];
-  return {
-    ...q,
-    scenarios: steps.length > 0
-      ? [{ id: nextId(), label: '움직임 1', steps }]
-      : [],
-  };
+  let result = q;
+  if (result.scenarios === undefined) {
+    const steps = result.animSteps || [];
+    result = {
+      ...result,
+      scenarios: steps.length > 0
+        ? [{ id: nextId(), label: '움직임 1', steps }]
+        : [],
+    };
+  }
+  if (!result.record) {
+    result = { ...result, record: { goals: {}, assists: {} } };
+  }
+  return result;
 }
 
 export function useLineup(initialData) {
@@ -29,15 +34,22 @@ export function useLineup(initialData) {
     const r = initialData?.record;
     return {
       attendance: r?.attendance ?? {},
-      goals: r?.goals ?? {},
-      assists: r?.assists ?? {},
       mvpPlayerId: r?.mvpPlayerId ?? null,
     };
   });
-  const [quarters, setQuarters] = useState(
-    (initialData?.quarters ?? [makeQuarter('1쿼터', STARTER_LAYOUT.map((p) => ({ ...p })))])
-      .map(migrateQuarter)
-  );
+  const [quarters, setQuarters] = useState(() => {
+    const rawQuarters = initialData?.quarters ?? [makeQuarter('1쿼터', STARTER_LAYOUT.map((p) => ({ ...p })))];
+    const legacyGoals = initialData?.record?.goals;
+    const legacyAssists = initialData?.record?.assists;
+    const firstHasNoRecord = !rawQuarters[0]?.record;
+    return rawQuarters.map((q, i) => {
+      const migrated = migrateQuarter(q);
+      if (i === 0 && firstHasNoRecord && (legacyGoals || legacyAssists)) {
+        return { ...migrated, record: { goals: legacyGoals || {}, assists: legacyAssists || {} } };
+      }
+      return migrated;
+    });
+  });
   const [activeIdx, setActiveIdx] = useState(0);
   const [phase, setPhase] = useState('base');
   const [activeScenarioIdx, setActiveScenarioIdx] = useState(0);
@@ -499,12 +511,20 @@ export function useLineup(initialData) {
   }, []);
 
   const setGoals = useCallback((playerId, delta) => {
-    setRecord((r) => withGoalsDelta(r, playerId, delta));
-  }, []);
+    setQuarters((qs) => qs.map((q, i) => {
+      if (i !== activeIdx) return q;
+      const qRecord = q.record || { goals: {}, assists: {} };
+      return { ...q, record: withGoalsDelta(qRecord, playerId, delta) };
+    }));
+  }, [activeIdx]);
 
   const setAssists = useCallback((playerId, delta) => {
-    setRecord((r) => withAssistsDelta(r, playerId, delta));
-  }, []);
+    setQuarters((qs) => qs.map((q, i) => {
+      if (i !== activeIdx) return q;
+      const qRecord = q.record || { goals: {}, assists: {} };
+      return { ...q, record: withAssistsDelta(qRecord, playerId, delta) };
+    }));
+  }, [activeIdx]);
 
   const setMvp = useCallback((playerId) => {
     setRecord((r) => withMvp(r, playerId));

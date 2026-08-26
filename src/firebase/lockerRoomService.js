@@ -42,13 +42,14 @@ export async function deleteLockerRoom(id) {
   await deleteDoc(doc(db, 'lockerRooms', id));
 }
 
-// 라인업이 삭제되기 직전, 그 안의 record를 팀 문서에 보관 — 라인업이 사라져도 팀 통계에는 남음
-export async function archiveLineupRecord(teamId, record) {
+// 라인업이 삭제되기 직전, 그 안의 기록을 팀 문서에 보관 — 라인업이 사라져도 팀 통계에는 남음
+// lineup: 전체 라인업 문서 (record + quarters 포함)
+export async function archiveLineupRecord(teamId, lineup) {
   const ref = doc(db, 'lockerRooms', teamId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
   const current = snap.data().archivedRecord || {};
-  const delta = buildArchiveDelta(record);
+  const delta = buildArchiveDelta(lineup);
   await updateDoc(ref, { archivedRecord: mergeArchivedRecord(current, delta) });
 }
 

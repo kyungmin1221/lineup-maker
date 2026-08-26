@@ -115,7 +115,7 @@ export default function MyLineupsPage() {
       // 팀 문서에 보관해서 라인업이 사라져도 팀 통계에서 빠지지 않게 함
       const full = await getLineup(lineup.id);
       if (full?.teamId) {
-        await archiveLineupRecord(full.teamId, full.record || {}).catch(console.error);
+        await archiveLineupRecord(full.teamId, full).catch(console.error);
       }
       await deleteLineup(lineup.id);
       setMyLineups((prev) => prev.filter((x) => x.id !== lineup.id));

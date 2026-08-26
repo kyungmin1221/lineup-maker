@@ -105,6 +105,7 @@ export function subscribeToTeamLineups(teamId, callback) {
         id: d.id,
         teamName: data.teamName || '',
         squad: data.squad || [],
+        quarters: data.quarters || [],
         record: data.record || { attendance: {}, goals: {}, assists: {}, mvpPlayerId: null },
         updatedAt: data.updatedAt?.toMillis?.() ?? 0,
       };

@@ -12,9 +12,23 @@ export function aggregateTeamRecords(players, lineups, archivedRecord = {}) {
   for (const lineup of lineups) {
     const record = lineup.record || {};
     const attendance = record.attendance || {};
-    const goals = record.goals || {};
-    const assists = record.assists || {};
     const mvpPlayerId = record.mvpPlayerId ?? null;
+
+    // 골/도움: 쿼터별 합산. 쿼터 record가 없으면 구버전 최상위 record에서 읽음
+    const quarters = lineup.quarters || [];
+    const hasQuarterRecords = quarters.some((q) => q.record);
+    let goals, assists;
+    if (hasQuarterRecords) {
+      goals = {};
+      assists = {};
+      for (const q of quarters) {
+        for (const [pid, count] of Object.entries(q.record?.goals || {})) goals[pid] = (goals[pid] || 0) + count;
+        for (const [pid, count] of Object.entries(q.record?.assists || {})) assists[pid] = (assists[pid] || 0) + count;
+      }
+    } else {
+      goals = record.goals || {};
+      assists = record.assists || {};
+    }
 
     for (const [playerId, status] of Object.entries(attendance)) {
       const s = stats.get(playerId);
@@ -48,26 +62,36 @@ export function aggregateTeamRecords(players, lineups, archivedRecord = {}) {
   return Array.from(stats.values());
 }
 
-// 라인업 삭제 직전, 그 라인업의 record를 라커룸에 보관하기 위한 델타로 변환
-export function buildArchiveDelta(record) {
+// 라인업 삭제 직전, 그 라인업의 기록을 라커룸에 보관하기 위한 델타로 변환
+// lineup: 전체 라인업 문서 (record + quarters 포함)
+export function buildArchiveDelta(lineup) {
   const delta = {};
   const ensure = (playerId) => {
     if (!delta[playerId]) delta[playerId] = { present: 0, late: 0, absent: 0, goals: 0, assists: 0, mvpCount: 0 };
     return delta[playerId];
   };
 
-  for (const [playerId, status] of Object.entries(record?.attendance || {})) {
+  const record = lineup?.record || {};
+
+  for (const [playerId, status] of Object.entries(record.attendance || {})) {
     if (['present', 'late', 'absent'].includes(status)) ensure(playerId)[status] += 1;
   }
-  for (const [playerId, count] of Object.entries(record?.goals || {})) {
-    ensure(playerId).goals += count;
-  }
-  for (const [playerId, count] of Object.entries(record?.assists || {})) {
-    ensure(playerId).assists += count;
-  }
-  if (record?.mvpPlayerId) {
+  if (record.mvpPlayerId) {
     ensure(record.mvpPlayerId).mvpCount += 1;
   }
+
+  const quarters = lineup?.quarters || [];
+  const hasQuarterRecords = quarters.some((q) => q.record);
+  if (hasQuarterRecords) {
+    for (const q of quarters) {
+      for (const [pid, count] of Object.entries(q.record?.goals || {})) ensure(pid).goals += count;
+      for (const [pid, count] of Object.entries(q.record?.assists || {})) ensure(pid).assists += count;
+    }
+  } else {
+    for (const [playerId, count] of Object.entries(record.goals || {})) ensure(playerId).goals += count;
+    for (const [playerId, count] of Object.entries(record.assists || {})) ensure(playerId).assists += count;
+  }
+
   return delta;
 }
 

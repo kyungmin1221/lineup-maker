@@ -234,7 +234,19 @@ export default function ViewPage() {
 
         <MatchRecord
           squad={lineup.squad}
-          record={lineup.record || { attendance: {}, goals: {}, assists: {}, mvpPlayerId: null }}
+          record={(() => {
+            const r = lineup.record || {};
+            const activeQ = (lineup.quarters || [])[activeIdx] || {};
+            const hasQRecord = !!activeQ.record;
+            return {
+              attendance: r.attendance || {},
+              mvpPlayerId: r.mvpPlayerId ?? null,
+              goals: hasQRecord ? (activeQ.record.goals || {}) : (r.goals || {}),
+              assists: hasQRecord ? (activeQ.record.assists || {}) : (r.assists || {}),
+            };
+          })()}
+          quarterLabel={(lineup.quarters?.[activeIdx]?.label || '').replace('쿼터', '쿼') || undefined}
+          isFirstQuarter={activeIdx === 0}
           readOnly
         />
 

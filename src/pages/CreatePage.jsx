@@ -412,11 +412,18 @@ function Editor({ id, initialData, isOwner, uid }) {
 
         <MatchRecord
           squad={squad}
-          record={record}
+          record={{
+            attendance: record.attendance,
+            mvpPlayerId: record.mvpPlayerId,
+            goals: (quarter.record || {}).goals || {},
+            assists: (quarter.record || {}).assists || {},
+          }}
           onSetAttendance={setAttendance}
           onSetGoals={setGoals}
           onSetAssists={setAssists}
           onSetMvp={setMvp}
+          quarterLabel={quarter.label.replace('쿼터', '쿼')}
+          isFirstQuarter={activeIdx === 0}
           readOnly={false}
         />
 

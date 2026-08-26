@@ -71,7 +71,7 @@ export function Stepper({ label, count, onChange, color }) {
   );
 }
 
-export default function MatchRecord({ squad, record, onSetAttendance, onSetGoals, onSetAssists, onSetMvp, readOnly }) {
+export default function MatchRecord({ squad, record, onSetAttendance, onSetGoals, onSetAssists, onSetMvp, readOnly, quarterLabel, isFirstQuarter = true }) {
   const attendance = record?.attendance || {};
   const goals = record?.goals || {};
   const assists = record?.assists || {};
@@ -98,7 +98,7 @@ export default function MatchRecord({ squad, record, onSetAttendance, onSetGoals
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-            경기 기록
+            {quarterLabel ? `${quarterLabel} 경기 기록` : '경기 기록'}
           </p>
           <span style={{
             fontSize: 11, fontWeight: 600,
@@ -135,7 +135,7 @@ export default function MatchRecord({ squad, record, onSetAttendance, onSetGoals
                 borderRadius: 12, padding: '10px 12px',
               }}
             >
-              {/* 1행: 번호 / 이름 / MVP */}
+              {/* 1행: 번호 / 이름 / MVP(1쿼터만) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{
                   width: 28, height: 28, borderRadius: 8, flexShrink: 0,
@@ -147,49 +147,53 @@ export default function MatchRecord({ squad, record, onSetAttendance, onSetGoals
                 <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {p.name}
                 </span>
-                <button
-                  type="button"
-                  disabled={readOnly}
-                  onClick={() => onSetMvp(p.id)}
-                  aria-label="MVP 지정"
-                  title="MVP 지정"
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                    background: isMvp ? '#f0ad4e25' : 'transparent',
-                    border: `1px solid ${isMvp ? '#f0ad4e60' : 'transparent'}`,
-                    color: isMvp ? '#f0ad4e' : C.muted,
-                    cursor: readOnly ? 'default' : 'pointer',
-                  }}
-                >
-                  <Crown size={14} fill={isMvp ? '#f0ad4e' : 'none'} />
-                </button>
-              </div>
-
-              {/* 2행: 출석 / 골 / 도움 */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingLeft: 38 }}>
-                <div style={{ position: 'relative' }}>
+                {isFirstQuarter && (
                   <button
                     type="button"
                     disabled={readOnly}
-                    onClick={() => setOpenAttendanceFor((cur) => (cur === p.id ? null : p.id))}
+                    onClick={() => onSetMvp(p.id)}
+                    aria-label="MVP 지정"
+                    title="MVP 지정"
                     style={{
-                      minWidth: 44, padding: '4px 8px', borderRadius: 8,
-                      fontSize: 11, fontWeight: 700, color: meta.color,
-                      background: `${meta.color}20`, border: `1px solid ${meta.color}40`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                      background: isMvp ? '#f0ad4e25' : 'transparent',
+                      border: `1px solid ${isMvp ? '#f0ad4e60' : 'transparent'}`,
+                      color: isMvp ? '#f0ad4e' : C.muted,
                       cursor: readOnly ? 'default' : 'pointer',
                     }}
                   >
-                    {meta.label}
+                    <Crown size={14} fill={isMvp ? '#f0ad4e' : 'none'} />
                   </button>
-                  {openAttendanceFor === p.id && !readOnly && (
-                    <AttendancePicker
-                      status={status}
-                      onSelect={(next) => { onSetAttendance(p.id, next); setOpenAttendanceFor(null); }}
-                      onClose={() => setOpenAttendanceFor(null)}
-                    />
-                  )}
-                </div>
+                )}
+              </div>
+
+              {/* 2행: 출석(1쿼터만) / 골 / 도움 */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: isFirstQuarter ? 'space-between' : 'flex-end', gap: 8, paddingLeft: 38 }}>
+                {isFirstQuarter && (
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      disabled={readOnly}
+                      onClick={() => setOpenAttendanceFor((cur) => (cur === p.id ? null : p.id))}
+                      style={{
+                        minWidth: 44, padding: '4px 8px', borderRadius: 8,
+                        fontSize: 11, fontWeight: 700, color: meta.color,
+                        background: `${meta.color}20`, border: `1px solid ${meta.color}40`,
+                        cursor: readOnly ? 'default' : 'pointer',
+                      }}
+                    >
+                      {meta.label}
+                    </button>
+                    {openAttendanceFor === p.id && !readOnly && (
+                      <AttendancePicker
+                        status={status}
+                        onSelect={(next) => { onSetAttendance(p.id, next); setOpenAttendanceFor(null); }}
+                        onClose={() => setOpenAttendanceFor(null)}
+                      />
+                    )}
+                  </div>
+                )}
 
                 {readOnly ? (
                   <span style={{ fontSize: 12, color: C.sub, flexShrink: 0 }}>
