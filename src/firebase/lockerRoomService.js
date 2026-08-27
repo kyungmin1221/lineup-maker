@@ -53,6 +53,23 @@ export async function archiveLineupRecord(teamId, lineup) {
   await updateDoc(ref, { archivedRecord: mergeArchivedRecord(current, delta) });
 }
 
+// 경기 기록(시즌 전적) 하나 추가 — 라인업/쿼터와 무관하게 독립적으로 관리
+export async function addMatch(id, match) {
+  const ref = doc(db, 'lockerRooms', id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const matches = [...(snap.data().matches || []), match];
+  await updateDoc(ref, { matches, updatedAt: serverTimestamp() });
+}
+
+export async function deleteMatch(id, matchId) {
+  const ref = doc(db, 'lockerRooms', id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const matches = (snap.data().matches || []).filter((m) => m.id !== matchId);
+  await updateDoc(ref, { matches, updatedAt: serverTimestamp() });
+}
+
 // 실시간 구독 - unsubscribe 함수 반환
 export function subscribeToLockerRoom(id, callback) {
   const ref = doc(db, 'lockerRooms', id);

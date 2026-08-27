@@ -11,7 +11,10 @@
       "Bash(xargs cat *)",
       "mcp__apps-in-toss__search_docs",
       "mcp__apps-in-toss__get_doc",
-      "Bash(node_modules/.bin/granite --help)"
+      "Bash(node_modules/.bin/granite --help)",
+      "Bash(git stash *)",
+      "Bash(python *)",
+      "Read(//c/Users/kpark26/AppData/Local/ms-playwright/**)"
     ]
   }
 }

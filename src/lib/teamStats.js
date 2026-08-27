@@ -1,7 +1,8 @@
 // players: 라커룸 선수 명단, lineups: subscribeToTeamLineups 결과(각 record 포함)
 // archivedRecord: 삭제된 라인업들의 기록을 보관해둔 맵({ playerId: { present, late, absent, goals, assists, mvpCount } })
+// statsBaseline: 시즌 초기화 시점의 스냅샷 — 이 값만큼을 최종 합계에서 차감해 "그 이후" 기록만 보이게 함
 // 선수별 출석/골/도움/MVP를 합산해 반환 (정렬은 호출부에서 선택한 기준으로 수행)
-export function aggregateTeamRecords(players, lineups, archivedRecord = {}) {
+export function aggregateTeamRecords(players, lineups, archivedRecord = {}, statsBaseline = {}) {
   const stats = new Map(
     players.map((p) => [
       p.id,
@@ -57,6 +58,17 @@ export function aggregateTeamRecords(players, lineups, archivedRecord = {}) {
     s.goals += d.goals || 0;
     s.assists += d.assists || 0;
     s.mvpCount += d.mvpCount || 0;
+  }
+
+  for (const s of stats.values()) {
+    const base = statsBaseline[s.playerId];
+    if (!base) continue;
+    s.present = Math.max(0, s.present - (base.present || 0));
+    s.late = Math.max(0, s.late - (base.late || 0));
+    s.absent = Math.max(0, s.absent - (base.absent || 0));
+    s.goals = Math.max(0, s.goals - (base.goals || 0));
+    s.assists = Math.max(0, s.assists - (base.assists || 0));
+    s.mvpCount = Math.max(0, s.mvpCount - (base.mvpCount || 0));
   }
 
   return Array.from(stats.values());

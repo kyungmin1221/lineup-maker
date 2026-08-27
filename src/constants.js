@@ -24,9 +24,9 @@ export const nextId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
 export const ATTENDANCE_OPTIONS = [
-  { key: 'present', label: '출석', color: '#2ecc71' },
+  { key: 'present', label: '참석', color: '#2ecc71' },
   { key: 'late', label: '지각', color: '#f0ad4e' },
-  { key: 'absent', label: '결석', color: '#c43f3f' },
+  { key: 'absent', label: '불참', color: '#c43f3f' },
 ];
 
 export function attendanceMeta(status) {
